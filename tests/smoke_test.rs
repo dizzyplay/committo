@@ -107,7 +107,7 @@ fn smoke_test_multiple_files() -> Result<(), Box<dyn std::error::Error>> {
 fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>> {
     let t1 = "1. For the entire project: Use the Conventional Commits format (feat, fix, docs).";
     let t2 = "2. For the frontend: When modifying UI components, the component: prefix is required.";
-    let guideline = "Priority follows the numbers: 1 = highest priority, 2, 3, 4, 5... = lower priority. Please consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
+    let guideline = "Priority follows the numbers: 1 = highest priority, 2, 3, 4, 5... = lower priority. If there are conflicting instructions, please prioritize the one with the higher priority. Consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
     let temp_dir = tempdir()?;
     let git_repo = temp_dir.path().join("test_repo");
     let sub_dir = git_repo.join("frontend");

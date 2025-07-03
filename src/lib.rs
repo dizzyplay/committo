@@ -126,7 +126,7 @@ async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, re
         Err(_) => ".committorc file",
     };
 
-    let guideline = "Priority follows the numbers: 1 = highest priority, 2, 3, 4, 5... = lower priority. Please consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
+    let guideline = "Priority follows the numbers: 1 = highest priority, 2, 3, 4, 5... = lower priority. If there are conflicting instructions, please prioritize the one with the higher priority. Consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
     let custom_conventions = find_and_build_prompt().unwrap_or_default();
     let system_prompt = if custom_conventions.is_empty() {
         "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string()
