@@ -98,7 +98,7 @@ fn find_and_build_prompt() -> io::Result<String> {
     let current_dir = env::current_dir()?;
 
     for ancestor in current_dir.ancestors() {
-        let convention_path = ancestor.join(".comittoconvention");
+        let convention_path = ancestor.join(".committoconvention");
         if convention_path.exists() {
             let content = fs::read_to_string(convention_path)?;
             prompt_parts.push(content);
@@ -113,7 +113,7 @@ fn find_and_build_prompt() -> io::Result<String> {
 async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, reqwest::Error> {
     let api_key_source = match env::var("OPENAI_API") {
         Ok(_) => "Environment variable",
-        Err(_) => ".comittoorc file",
+        Err(_) => ".committorc file",
     };
 
     let system_prompt = find_and_build_prompt().unwrap_or_else(|_| "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string());
@@ -154,7 +154,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
     match cli.command {
         Commands::Env { command } => {
             let home_path = home::home_dir().ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory"))?;
-            let config_path = home_path.join(".comittoorc");
+            let config_path = home_path.join(".committorc");
 
             match command {
                 EnvCommands::Set { pair } => {
@@ -172,14 +172,14 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                             }
                         }
                     } else {
-                        println!("No .comittoorc file found at {}.", config_path.display());
+                        println!("No .committorc file found at {}.", config_path.display());
                     }
                 }
             }
         }
         Commands::Generate { dry_run } => {
             let home_path = home::home_dir().ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory"))?;
-            let config_path = home_path.join(".comittoorc");
+            let config_path = home_path.join(".committorc");
             if config_path.exists() {
                 dotenvy::from_path(&config_path).ok();
             }
