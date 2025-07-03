@@ -105,9 +105,9 @@ fn smoke_test_multiple_files() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>> {
-    let t1 = "For the entire project: Use the Conventional Commits format (feat, fix, docs).";
-    let t2 = "For the frontend: When modifying UI components, the component: prefix is required.";
-    let guideline = "The importance of these guidelines increases from top to bottom. Please consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
+    let t1 = "1. For the entire project: Use the Conventional Commits format (feat, fix, docs).";
+    let t2 = "2. For the frontend: When modifying UI components, the component: prefix is required.";
+    let guideline = "Priority follows the numbers: 1 = highest priority, 2, 3, 4, 5... = lower priority. Please consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
     let temp_dir = tempdir()?;
     let git_repo = temp_dir.path().join("test_repo");
     let sub_dir = git_repo.join("frontend");
@@ -130,8 +130,8 @@ fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>
         .output()?;
 
     // Create nested convention files (parent -> child priority)
-    fs::write(git_repo.join(".committoconvention"), t1)?;
-    fs::write(sub_dir.join(".committoconvention"), t2)?;
+    fs::write(git_repo.join(".committoconvention"), "For the entire project: Use the Conventional Commits format (feat, fix, docs).")?;
+    fs::write(sub_dir.join(".committoconvention"), "For the frontend: When modifying UI components, the component: prefix is required.")?;
 
     // Create and stage a file in subdirectory
     fs::write(sub_dir.join("app.js"), "console.log('Hello');")?;
@@ -151,6 +151,58 @@ fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>
         .stdout(predicate::str::contains(t2))
         .stdout(predicate::str::contains(guideline))
         .stdout(predicate::str::contains("app.js"));
+
+    Ok(())
+}
+
+#[test]
+fn test_numbered_priority_convention_files() -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = tempdir()?;
+    let git_repo = temp_dir.path().join("test_repo");
+    let sub_dir = git_repo.join("frontend");
+    let deep_dir = sub_dir.join("components");
+    fs::create_dir_all(&deep_dir)?;
+
+    // Initialize git repo
+    Command::new("git")
+        .current_dir(&git_repo)
+        .args(["init"])
+        .output()?;
+
+    Command::new("git")
+        .current_dir(&git_repo)
+        .args(["config", "user.name", "Test User"])
+        .output()?;
+
+    Command::new("git")
+        .current_dir(&git_repo)
+        .args(["config", "user.email", "test@example.com"])
+        .output()?;
+
+    // Create 3-level nested convention files
+    fs::write(git_repo.join(".committoconvention"), "Use Korean for commit messages")?;
+    fs::write(sub_dir.join(".committoconvention"), "Frontend: Use component prefixes")?;
+    fs::write(deep_dir.join(".committoconvention"), "Components: Describe UI changes in detail")?;
+
+    // Create and stage a file in deepest directory
+    fs::write(deep_dir.join("Button.js"), "export const Button = () => <button>Click</button>;")?;
+    Command::new("git")
+        .current_dir(&git_repo)
+        .args(["add", "."])
+        .output()?;
+
+    // Test from deepest directory
+    let mut cmd = Command::cargo_bin("committo")?;
+    cmd.current_dir(&deep_dir);
+    cmd.arg("generate").arg("--dry-run");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("1. Use Korean for commit messages"))
+        .stdout(predicate::str::contains("2. Frontend: Use component prefixes"))
+        .stdout(predicate::str::contains("3. Components: Describe UI changes in detail"))
+        .stdout(predicate::str::contains("Priority follows the numbers: 1 = highest priority"))
+        .stdout(predicate::str::contains("Button.js"));
 
     Ok(())
 }
