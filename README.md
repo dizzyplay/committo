@@ -58,7 +58,7 @@ cargo run -- generate
 
 ## 설정 파일
 
-`~/.comittoorc`:
+`~/.committorc`:
 ```bash
 export OPENAI_API="your-key-here"
 ```
