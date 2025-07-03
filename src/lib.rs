@@ -118,7 +118,13 @@ async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, re
         Err(_) => ".committorc file",
     };
 
-    let system_prompt = find_and_build_prompt().unwrap_or_else(|_| "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string());
+    let guideline = "The importance of these guidelines increases from top to bottom. Please consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
+    let custom_conventions = find_and_build_prompt().unwrap_or_default();
+    let system_prompt = if custom_conventions.is_empty() {
+        "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string()
+    } else {
+        format!("{}\n{}", custom_conventions, guideline)
+    };
 
     if dry_run {
         println!("--- Dry Run ---");
