@@ -1,8 +1,9 @@
-mod api;
+pub mod api;
 mod cli;
 mod config;
 mod convention;
 mod git;
+pub mod providers;
 
 pub use cli::{Cli, Commands, EnvCommands};
 

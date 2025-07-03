@@ -29,24 +29,67 @@ impl std::fmt::Display for LlmError {
 
 impl std::error::Error for LlmError {}
 
+/// Configuration for LLM providers
+#[derive(Clone)]
+pub struct LlmConfig {
+    pub api_key_env_var: String,
+    pub model: String,
+    pub endpoint: String,
+}
+
 /// Trait for different LLM providers
 #[async_trait]
-pub trait LlmProvider {
-    async fn generate_commit_message(&self, diff: &str, dry_run: bool) -> Result<String, LlmError>;
-    fn get_api_key_source(&self) -> String;
-}
-
-/// OpenAI provider implementation
-pub struct OpenAiProvider;
-
-impl OpenAiProvider {
-    pub fn new() -> Self {
-        Self
+pub trait LlmProvider: Send + Sync {
+    /// Get the configuration for this provider
+    fn get_config(&self) -> &LlmConfig;
+    
+    /// Get provider name for display
+    fn get_provider_name(&self) -> &'static str;
+    
+    /// Generate commit message using this provider (implementation-specific)
+    async fn generate_commit_message_impl(&self, system_prompt: &str, diff: &str) -> Result<String, LlmError>;
+    
+    /// Get API key from environment or config file
+    fn get_api_key(&self) -> Result<String, LlmError> {
+        env::var(&self.get_config().api_key_env_var)
+            .map_err(|_| LlmError::ConfigError(format!("{} environment variable not set", self.get_config().api_key_env_var)))
     }
-}
-
-#[async_trait]
-impl LlmProvider for OpenAiProvider {
+    
+    /// Get API key source description
+    fn get_api_key_source(&self) -> String {
+        match env::var(&self.get_config().api_key_env_var) {
+            Ok(_) => "Environment variable".to_string(),
+            Err(_) => ".committorc file".to_string(),
+        }
+    }
+    
+    /// Mask API key for display (first 5 chars + asterisks)
+    fn mask_api_key(&self, api_key: &str) -> String {
+        if api_key.len() >= 5 {
+            format!("{}{}", &api_key[..5], "*".repeat(api_key.len() - 5))
+        } else {
+            "*".repeat(api_key.len())
+        }
+    }
+    
+    /// Print dry run information
+    fn print_dry_run_info(&self, system_prompt: &str, diff: &str) {
+        println!("--- Dry Run ---");
+        println!("Provider: {}", self.get_provider_name());
+        println!("API Key Source: {}", self.get_api_key_source());
+        
+        if let Ok(api_key) = env::var(&self.get_config().api_key_env_var) {
+            println!("API Key: {}", self.mask_api_key(&api_key));
+        }
+        
+        println!("\n--- Prompt ---");
+        println!("{system_prompt}");
+        println!("\n--- Git Diff ---");
+        println!("{diff}");
+        println!("--- End Dry Run ---");
+    }
+    
+    /// Main generate commit message method (with dry run support)
     async fn generate_commit_message(&self, diff: &str, dry_run: bool) -> Result<String, LlmError> {
         let guideline = "**IMPORTANT PRIORITY RULES:**\n- Numbers indicate priority: 1 = HIGHEST priority, 2, 3, 4, 5... = lower priority\n- When instructions conflict, ALWAYS follow the higher priority (lower number)\n- Apply these rules when analyzing git diff and generating commit messages\n";
         let custom_conventions = find_and_build_prompt().unwrap_or_default();
@@ -57,88 +100,25 @@ impl LlmProvider for OpenAiProvider {
         };
 
         if dry_run {
-            println!("--- Dry Run ---");
-            
-            let api_key_source = self.get_api_key_source();
-            println!("API Key Source: {api_key_source}");
-            
-            // Show masked API key
-            if let Ok(api_key) = env::var("OPENAI_API") {
-                let masked_key = if api_key.len() >= 5 {
-                    format!("{}{}",
-                        &api_key[..5],
-                        "*".repeat(api_key.len() - 5)
-                    )
-                } else {
-                    "*".repeat(api_key.len())
-                };
-                println!("API Key: {masked_key}");
-            }
-            
-            println!("\n--- Prompt ---");
-            println!("{system_prompt}");
-            println!("\n--- Git Diff ---");
-            println!("{diff}");
-            println!("--- End Dry Run ---");
+            self.print_dry_run_info(&system_prompt, diff);
             return Ok("Dry run complete.".to_string());
         }
 
-        let api_key = env::var("OPENAI_API")
-            .map_err(|_| LlmError::ConfigError("OPENAI_API environment variable not set".to_string()))?;
-
-        let client = reqwest::Client::new();
-        let request_body = serde_json::json!({
-            "model": "gpt-3.5-turbo",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": diff}
-            ]
-        });
-
-        let response = client
-            .post("https://api.openai.com/v1/chat/completions")
-            .bearer_auth(api_key)
-            .json(&request_body)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            return Err(LlmError::ApiError(format!(
-                "API request failed with status: {}",
-                response.status()
-            )));
-        }
-
-        let response_data: serde_json::Value = response.json().await?;
-        
-        let content = response_data
-            .get("choices")
-            .and_then(|choices| choices.get(0))
-            .and_then(|choice| choice.get("message"))
-            .and_then(|message| message.get("content"))
-            .and_then(|content| content.as_str())
-            .ok_or_else(|| LlmError::ApiError("Invalid response format from OpenAI API".to_string()))?;
-
-        Ok(content.to_string())
-    }
-
-
-    fn get_api_key_source(&self) -> String {
-        match env::var("OPENAI_API") {
-            Ok(_) => "Environment variable".to_string(),
-            Err(_) => ".committorc file".to_string(),
-        }
+        self.generate_commit_message_impl(&system_prompt, diff).await
     }
 }
 
-/// Get the default LLM provider
-/// TODO: Make this configurable to support Claude, local models, etc.
-pub fn get_default_provider() -> Box<dyn LlmProvider + Send + Sync> {
-    Box::new(OpenAiProvider::new())
-}
-
-/// Generate commit message using the default LLM provider
-pub async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, LlmError> {
-    let provider = get_default_provider();
+/// Generate commit message using provided LLM provider
+pub async fn generate_commit_message_with_provider(
+    provider: &dyn LlmProvider,
+    diff: &str,
+    dry_run: bool,
+) -> Result<String, LlmError> {
     provider.generate_commit_message(diff, dry_run).await
+}
+
+/// Generate commit message using default provider (for backward compatibility)
+pub async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, LlmError> {
+    let provider = crate::providers::ProviderFactory::create_provider();
+    generate_commit_message_with_provider(provider.as_ref(), diff, dry_run).await
 }
