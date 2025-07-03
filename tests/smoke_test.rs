@@ -105,6 +105,9 @@ fn smoke_test_multiple_files() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>> {
+    let t1 = "For the entire project: Use the Conventional Commits format (feat, fix, docs).";
+    let t2 = "For the frontend: When modifying UI components, the component: prefix is required.";
+    let guideline = "The importance of these guidelines increases from top to bottom. Please consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
     let temp_dir = tempdir()?;
     let git_repo = temp_dir.path().join("test_repo");
     let sub_dir = git_repo.join("frontend");
@@ -126,9 +129,9 @@ fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>
         .args(["config", "user.email", "test@example.com"])
         .output()?;
 
-    // Create nested convention files
-    fs::write(git_repo.join(".committoconvention"), "Root: Use semantic versioning")?;
-    fs::write(sub_dir.join(".committoconvention"), "Frontend: Use UI/UX prefixes")?;
+    // Create nested convention files (parent -> child priority)
+    fs::write(git_repo.join(".committoconvention"), t1)?;
+    fs::write(sub_dir.join(".committoconvention"), t2)?;
 
     // Create and stage a file in subdirectory
     fs::write(sub_dir.join("app.js"), "console.log('Hello');")?;
@@ -144,8 +147,9 @@ fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Root: Use semantic versioning"))
-        .stdout(predicate::str::contains("Frontend: Use UI/UX prefixes"))
+        .stdout(predicate::str::contains(t1))
+        .stdout(predicate::str::contains(t2))
+        .stdout(predicate::str::contains(guideline))
         .stdout(predicate::str::contains("app.js"));
 
     Ok(())
