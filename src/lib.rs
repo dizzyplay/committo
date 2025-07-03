@@ -28,6 +28,8 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Quick dry-run (alias for generate --dry-run)
+    Dev,
 }
 
 #[derive(Subcommand, Debug, PartialEq)]
@@ -178,6 +180,10 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             }
         }
         Commands::Generate { dry_run } => {
+            // Check for COMMITTO_DEV environment variable to force dry-run
+            let force_dry_run = env::var("COMMITTO_DEV").is_ok();
+            let effective_dry_run = dry_run || force_dry_run;
+            
             let home_path = home::home_dir().ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory"))?;
             let config_path = home_path.join(".committorc");
             if config_path.exists() {
@@ -196,13 +202,18 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             }
 
             let diff = String::from_utf8_lossy(&output.stdout);
-            if !dry_run && diff.trim().is_empty() {
+            if !effective_dry_run && diff.trim().is_empty() {
                 println!("No staged changes to commit.");
                 return Ok(());
             }
 
-            let commit_message = generate_commit_message(&diff, dry_run).await.map_err(io::Error::other)?;
+            let commit_message = generate_commit_message(&diff, effective_dry_run).await.map_err(io::Error::other)?;
             println!("{commit_message}");
+        }
+        Commands::Dev => {
+            // Dev command is just an alias for generate --dry-run
+            let generate_cmd = Commands::Generate { dry_run: true };
+            return Box::pin(run(Cli { command: generate_cmd })).await;
         }
     }
     Ok(())
