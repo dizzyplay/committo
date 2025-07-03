@@ -48,8 +48,6 @@ impl OpenAiProvider {
 #[async_trait]
 impl LlmProvider for OpenAiProvider {
     async fn generate_commit_message(&self, diff: &str, dry_run: bool) -> Result<String, LlmError> {
-        let api_key_source = self.get_api_key_source();
-
         let guideline = "**IMPORTANT PRIORITY RULES:**\n- Numbers indicate priority: 1 = HIGHEST priority, 2, 3, 4, 5... = lower priority\n- When instructions conflict, ALWAYS follow the higher priority (lower number)\n- Apply these rules when analyzing git diff and generating commit messages\n";
         let custom_conventions = find_and_build_prompt().unwrap_or_default();
         let system_prompt = if custom_conventions.is_empty() {
@@ -60,7 +58,23 @@ impl LlmProvider for OpenAiProvider {
 
         if dry_run {
             println!("--- Dry Run ---");
+            
+            let api_key_source = self.get_api_key_source();
             println!("API Key Source: {api_key_source}");
+            
+            // Show masked API key
+            if let Ok(api_key) = env::var("OPENAI_API") {
+                let masked_key = if api_key.len() >= 5 {
+                    format!("{}{}",
+                        &api_key[..5],
+                        "*".repeat(api_key.len() - 5)
+                    )
+                } else {
+                    "*".repeat(api_key.len())
+                };
+                println!("API Key: {masked_key}");
+            }
+            
             println!("\n--- Prompt ---");
             println!("{system_prompt}");
             println!("\n--- Git Diff ---");

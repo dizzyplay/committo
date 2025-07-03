@@ -30,6 +30,9 @@ echo "For partial modifications use UPDATE prefix, for new features use ADD pref
 
 # Initialize git repo in project directory
 cd project
+
+# Create test config file in project directory (will be used as HOME)
+echo "export OPENAI_API=\"sk-xq7nM9pLk2vB8sWt1A\"" > .committorc
 git init -q
 git config user.name  "Test User"
 git config user.email "test@example.com"
@@ -40,6 +43,7 @@ git add frontend/App.js
 
 echo "📝 Testing hierarchical conventions (should show both prompts)..."
 cd frontend
-"$BIN_PATH" generate --dry-run
+# Set HOME to project dir so it finds our test config
+HOME="$TEMP_DIR/project" "$BIN_PATH" generate --dry-run
 
 echo "✅ Smoke test completed!"
