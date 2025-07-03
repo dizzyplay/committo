@@ -19,7 +19,7 @@ fn test_set_command() -> Result<(), Box<dyn std::error::Error>> {
     cmd.assert().success();
 
     let content = fs::read_to_string(config_path)?;
-    assert!(content.contains("export OPENAI_API=\"test_key\""));
+    assert!(content.contains("export OPENAI_API_KEY=\"test_key\""));
 
     Ok(())
 }

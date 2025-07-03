@@ -9,7 +9,7 @@ pub const CONFIG_FILE_NAME: &str = ".committorc";
 pub const CONVENTION_FILE_NAME: &str = ".committoconvention";
 
 /// Environment variable names
-pub const OPENAI_API_KEY_ENV: &str = "OPENAI_API";
+pub const OPENAI_API_KEY_ENV: &str = "OPENAI_API_KEY";
 pub const LLM_PROVIDER_ENV: &str = "LLM_PROVIDER";
 pub const LLM_MODEL_ENV: &str = "LLM_MODEL";
 pub const COMMITTO_DEV_ENV: &str = "COMMITTO_DEV";

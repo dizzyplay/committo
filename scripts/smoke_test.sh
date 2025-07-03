@@ -32,7 +32,7 @@ echo "For partial modifications use UPDATE prefix, for new features use ADD pref
 cd project
 
 # Create test config file in project directory (will be used as HOME)
-echo "export OPENAI_API=\"sk-xq7nM9pLk2vB8sWt1A\"" > .committorc
+echo "export OPENAI_API_KEY=\"sk-xq7nM9pLk2vB8sWt1A\"" > .committorc
 git init -q
 git config user.name  "Test User"
 git config user.email "test@example.com"
