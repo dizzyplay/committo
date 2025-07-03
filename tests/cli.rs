@@ -43,12 +43,13 @@ fn test_generate_dry_run_with_convention_files() -> Result<(), Box<dyn std::erro
     let mut cmd = Command::cargo_bin("committo")?;
     cmd.current_dir(&sub_dir);
     cmd.env("PATH", format!("{}:{}", temp_dir.path().to_str().unwrap(), std::env::var("PATH").unwrap())); // Prepend the temp dir to PATH
+    cmd.env(OPENAI_API_KEY_ENV, "test_key_for_dry_run"); // Set API key for dry run
     cmd.arg("generate").arg("--dry-run");
 
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("--- Dry Run ---"))
-        .stdout(predicate::str::contains(format!("API Key Source: {} file", CONFIG_FILE_NAME))) // Assuming it's set in the test env
+        .stdout(predicate::str::contains("API Key Source: Environment variable"))
         .stdout(predicate::str::contains("--- Prompt ---"))
         .stdout(predicate::str::contains("1. Root convention"))
         .stdout(predicate::str::contains("2. Subdir convention"))

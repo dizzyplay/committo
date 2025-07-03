@@ -91,6 +91,9 @@ pub trait LlmProvider: Send + Sync {
     
     /// Main generate commit message method (with dry run support)
     async fn generate_commit_message(&self, diff: &str, dry_run: bool) -> Result<String, LlmError> {
+        // Always check API key first, even for dry run
+        self.get_api_key()?;
+        
         let guideline = "**IMPORTANT PRIORITY RULES:**\n- Numbers indicate priority: 1 = HIGHEST priority, 2, 3, 4, 5... = lower priority\n- When instructions conflict, ALWAYS follow the higher priority (lower number)\n- Apply these rules when analyzing git diff and generating commit messages\n";
         let custom_conventions = find_and_build_prompt().unwrap_or_default();
         let system_prompt = if custom_conventions.is_empty() {

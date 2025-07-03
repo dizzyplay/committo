@@ -43,6 +43,7 @@ fn smoke_test_full_workflow() -> Result<(), Box<dyn std::error::Error>> {
     // Test dry-run with our built binary
     let mut cmd = Command::cargo_bin("committo")?;
     cmd.current_dir(&git_repo);
+    cmd.env("OPENAI_API_KEY", "test_key_for_smoke_test");
     cmd.arg("generate").arg("--dry-run");
 
     cmd.assert()
@@ -93,6 +94,7 @@ fn smoke_test_multiple_files() -> Result<(), Box<dyn std::error::Error>> {
     // Test dry-run
     let mut cmd = Command::cargo_bin("committo")?;
     cmd.current_dir(&git_repo);
+    cmd.env("OPENAI_API_KEY", "test_key_for_smoke_test");
     cmd.arg("generate").arg("--dry-run");
 
     cmd.assert()
@@ -144,6 +146,7 @@ fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>
     // Test from subdirectory
     let mut cmd = Command::cargo_bin("committo")?;
     cmd.current_dir(&sub_dir);
+    cmd.env("OPENAI_API_KEY", "test_key_for_smoke_test");
     cmd.arg("generate").arg("--dry-run");
 
     cmd.assert()
@@ -195,6 +198,7 @@ fn test_numbered_priority_convention_files() -> Result<(), Box<dyn std::error::E
     // Test from deepest directory
     let mut cmd = Command::cargo_bin("committo")?;
     cmd.current_dir(&deep_dir);
+    cmd.env("OPENAI_API_KEY", "test_key_for_smoke_test");
     cmd.arg("generate").arg("--dry-run");
 
     cmd.assert()
