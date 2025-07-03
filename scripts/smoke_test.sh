@@ -16,21 +16,30 @@ fi
 echo "🧪 Running smoke tests (unit/integration)..."
 cargo test --quiet --test smoke_test
 
-echo "🎯 Running quick manual test..."
+echo "🎯 Running manual hierarchical convention test..."
 TEMP_DIR=$(mktemp -d)
 echo "Created temp dir: $TEMP_DIR"
 trap 'rm -rf "$TEMP_DIR"' EXIT        # 스크립트 종료 시 자동 정리
 
 cd "$TEMP_DIR"
-echo "Please suggest an appropriate git commit message as instructed below." >> .committoconvention
+mkdir -p project/frontend
+
+# Create hierarchical convention files
+echo "Please write commit messages in Korean." > .committoconvention
+echo "For partial modifications use UPDATE prefix, for new features use ADD prefix, for bug fixes use FIX prefix. Follow with : and a space." > project/.committoconvention
+
+# Initialize git repo in project directory
+cd project
 git init -q
 git config user.name  "Test User"
 git config user.email "test@example.com"
 
-echo "feat: add new feature" > test.txt
-git add test.txt
+# Create and stage a file in frontend subdirectory
+echo "const App = () => <div>Hello</div>;" > frontend/App.js
+git add frontend/App.js
 
-echo "📝 Testing dry-run..."
+echo "📝 Testing hierarchical conventions (should show both prompts)..."
+cd frontend
 "$BIN_PATH" generate --dry-run
 
 echo "✅ Smoke test completed!"
