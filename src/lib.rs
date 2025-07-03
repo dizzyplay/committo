@@ -1,8 +1,8 @@
+mod api;
 mod cli;
 mod config;
 mod convention;
 mod git;
-mod openai;
 
 pub use cli::{Cli, Commands, EnvCommands};
 
@@ -46,9 +46,9 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                 return Ok(());
             }
 
-            let commit_message = openai::generate_commit_message(&diff, effective_dry_run)
+            let commit_message = api::generate_commit_message(&diff, effective_dry_run)
                 .await
-                .map_err(io::Error::other)?;
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
             println!("{commit_message}");
         }
         Commands::Dev => {
