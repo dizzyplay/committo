@@ -3,6 +3,7 @@ use predicates::prelude::*;
 use std::fs;
 use std::process::Command;
 use tempfile::tempdir;
+use committo::config::CONVENTION_FILE_NAME;
 
 #[test]
 fn smoke_test_full_workflow() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,7 +38,7 @@ fn smoke_test_full_workflow() -> Result<(), Box<dyn std::error::Error>> {
         .output()?;
 
     // Create convention file
-    fs::write(git_repo.join(".committoconvention"), "Use conventional commits format")?;
+    fs::write(git_repo.join(CONVENTION_FILE_NAME), "Use conventional commits format")?;
 
     // Test dry-run with our built binary
     let mut cmd = Command::cargo_bin("committo")?;
@@ -130,8 +131,8 @@ fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>
         .output()?;
 
     // Create nested convention files (parent -> child priority)
-    fs::write(git_repo.join(".committoconvention"), "For the entire project: Use the Conventional Commits format (feat, fix, docs).")?;
-    fs::write(sub_dir.join(".committoconvention"), "For the frontend: When modifying UI components, the component: prefix is required.")?;
+    fs::write(git_repo.join(CONVENTION_FILE_NAME), "For the entire project: Use the Conventional Commits format (feat, fix, docs).")?;
+    fs::write(sub_dir.join(CONVENTION_FILE_NAME), "For the frontend: When modifying UI components, the component: prefix is required.")?;
 
     // Create and stage a file in subdirectory
     fs::write(sub_dir.join("app.js"), "console.log('Hello');")?;
@@ -180,9 +181,9 @@ fn test_numbered_priority_convention_files() -> Result<(), Box<dyn std::error::E
         .output()?;
 
     // Create 3-level nested convention files
-    fs::write(git_repo.join(".committoconvention"), "Use Korean for commit messages")?;
-    fs::write(sub_dir.join(".committoconvention"), "Frontend: Use component prefixes")?;
-    fs::write(deep_dir.join(".committoconvention"), "Components: Describe UI changes in detail")?;
+    fs::write(git_repo.join(CONVENTION_FILE_NAME), "Use Korean for commit messages")?;
+    fs::write(sub_dir.join(CONVENTION_FILE_NAME), "Frontend: Use component prefixes")?;
+    fs::write(deep_dir.join(CONVENTION_FILE_NAME), "Components: Describe UI changes in detail")?;
 
     // Create and stage a file in deepest directory
     fs::write(deep_dir.join("Button.js"), "export const Button = () => <button>Click</button>;")?;
@@ -223,78 +224,4 @@ pub fn run_smoke_test_helper() -> Result<(), Box<dyn std::error::Error>> {
     
     println!("Smoke tests completed!");
     Ok(())
-}
-
-#[cfg(test)]
-mod provider_integration_tests {
-    use committo::providers::MockProvider;
-    use committo::api::generate_commit_message_with_provider;
-    use std::env;
-    use serial_test::serial;
-
-    #[tokio::test(flavor = "current_thread")]
-    #[serial]
-    async fn test_mock_provider_integration() -> Result<(), Box<dyn std::error::Error>> {
-        // Setup mock provider
-        let provider = MockProvider::with_response("feat: add mock integration test");
-        unsafe { env::set_var("MOCK_API_KEY", "test_key_12345"); }
-        
-        // Test dry run
-        let dry_result = generate_commit_message_with_provider(
-            &provider,
-            "diff --git a/test.txt b/test.txt\n+new line",
-            true
-        ).await?;
-        assert_eq!(dry_result, "Dry run complete.");
-        
-        // Test actual generation
-        let result = generate_commit_message_with_provider(
-            &provider,
-            "diff --git a/test.txt b/test.txt\n+new line",
-            false
-        ).await?;
-        assert_eq!(result, "feat: add mock integration test");
-        
-        unsafe { env::remove_var("MOCK_API_KEY"); }
-        Ok(())
-    }
-
-    #[tokio::test(flavor = "current_thread")]
-    #[serial]
-    async fn test_provider_error_handling() -> Result<(), Box<dyn std::error::Error>> {
-        // Test with failing provider
-        let provider = MockProvider::with_failure();
-        unsafe { env::set_var("MOCK_API_KEY", "test_key"); }
-        
-        let result = generate_commit_message_with_provider(
-            &provider,
-            "diff content",
-            false
-        ).await;
-        
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Mock API error"));
-        
-        unsafe { env::remove_var("MOCK_API_KEY"); }
-        Ok(())
-    }
-
-    #[tokio::test(flavor = "current_thread")]
-    #[serial]
-    async fn test_provider_without_api_key() -> Result<(), Box<dyn std::error::Error>> {
-        // Test without API key
-        let provider = MockProvider::new();
-        unsafe { env::remove_var("MOCK_API_KEY"); }
-        
-        let result = generate_commit_message_with_provider(
-            &provider,
-            "diff content",
-            false
-        ).await;
-        
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("MOCK_API_KEY environment variable not set"));
-        
-        Ok(())
-    }
 }

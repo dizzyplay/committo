@@ -30,7 +30,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
         }
         Commands::Generate { dry_run } => {
             // Check for COMMITTO_DEV environment variable to force dry-run
-            let force_dry_run = env::var("COMMITTO_DEV").is_ok();
+            let force_dry_run = env::var(config::COMMITTO_DEV_ENV).is_ok();
             let effective_dry_run = dry_run || force_dry_run;
 
             let home_path = home::home_dir().ok_or_else(|| {

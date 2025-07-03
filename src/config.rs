@@ -5,6 +5,22 @@ use std::path::Path;
 /// Configuration file name
 pub const CONFIG_FILE_NAME: &str = ".committorc";
 
+/// Convention file name  
+pub const CONVENTION_FILE_NAME: &str = ".committoconvention";
+
+/// Environment variable names
+pub const OPENAI_API_KEY_ENV: &str = "OPENAI_API";
+pub const LLM_PROVIDER_ENV: &str = "LLM_PROVIDER";
+pub const COMMITTO_DEV_ENV: &str = "COMMITTO_DEV";
+
+/// Default OpenAI models
+pub const DEFAULT_OPENAI_MODEL: &str = "gpt-3.5-turbo";
+pub const GPT4_MODEL: &str = "gpt-4";
+
+/// Provider identifiers for LLM_PROVIDER environment variable
+pub const PROVIDER_OPENAI: &str = "openai";
+pub const PROVIDER_OPENAI_GPT4: &str = "openai-gpt4";
+
 /// Handle setting environment variables in config file
 pub fn handle_set_command(pair: &str, config_path: &Path) -> io::Result<()> {
     let parts: Vec<&str> = pair.splitn(2, '=').collect();

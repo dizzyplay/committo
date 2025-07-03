@@ -4,7 +4,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 use tempfile::tempdir;
-use committo::config::CONFIG_FILE_NAME;
+use committo::config::{CONFIG_FILE_NAME, CONVENTION_FILE_NAME, OPENAI_API_KEY_ENV};
 
 #[test]
 fn test_set_command() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,7 +14,7 @@ fn test_set_command() -> Result<(), Box<dyn std::error::Error>> {
     // Mock the HOME environment variable to control where the config file is created.
     let mut cmd = Command::cargo_bin("committo")?;
     cmd.env("HOME", temp_dir.path());
-    cmd.arg("env").arg("set").arg("OPENAI_API=test_key");
+    cmd.arg("env").arg("set").arg(format!("{}=test_key", OPENAI_API_KEY_ENV));
     
     cmd.assert().success();
 
@@ -32,8 +32,8 @@ fn test_generate_dry_run_with_convention_files() -> Result<(), Box<dyn std::erro
     fs::create_dir(&sub_dir)?;
 
     // Create convention files
-    fs::write(project_root.join(".committoconvention"), "Root convention")?;
-    fs::write(sub_dir.join(".committoconvention"), "Subdir convention")?;
+    fs::write(project_root.join(CONVENTION_FILE_NAME), "Root convention")?;
+    fs::write(sub_dir.join(CONVENTION_FILE_NAME), "Subdir convention")?;
 
     // Mock git diff by creating a dummy script
     let script_path = temp_dir.path().join("git");

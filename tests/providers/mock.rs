@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use crate::api::{LlmConfig, LlmError, LlmProvider};
+use committo::api::{LlmConfig, LlmError, LlmProvider};
+
+const MOCK_API_KEY_ENV: &str = "MOCK_API_KEY";
 
 /// Mock provider for testing
 pub struct MockProvider {
@@ -12,7 +14,7 @@ impl MockProvider {
     pub fn new() -> Self {
         Self {
             config: LlmConfig {
-                api_key_env_var: "MOCK_API_KEY".to_string(),
+                api_key_env_var: MOCK_API_KEY_ENV.to_string(),
                 model: "mock-model".to_string(),
                 endpoint: "https://mock.api.com/v1/chat/completions".to_string(),
             },
@@ -24,7 +26,7 @@ impl MockProvider {
     pub fn with_response(response: &str) -> Self {
         Self {
             config: LlmConfig {
-                api_key_env_var: "MOCK_API_KEY".to_string(),
+                api_key_env_var: MOCK_API_KEY_ENV.to_string(),
                 model: "mock-model".to_string(),
                 endpoint: "https://mock.api.com/v1/chat/completions".to_string(),
             },
@@ -36,7 +38,7 @@ impl MockProvider {
     pub fn with_failure() -> Self {
         Self {
             config: LlmConfig {
-                api_key_env_var: "MOCK_API_KEY".to_string(),
+                api_key_env_var: MOCK_API_KEY_ENV.to_string(),
                 model: "mock-model".to_string(),
                 endpoint: "https://mock.api.com/v1/chat/completions".to_string(),
             },

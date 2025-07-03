@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use crate::api::{LlmConfig, LlmError, LlmProvider};
+use crate::config::{OPENAI_API_KEY_ENV, DEFAULT_OPENAI_MODEL};
 
 /// OpenAI provider implementation
 pub struct OpenAiProvider {
@@ -10,8 +11,8 @@ impl OpenAiProvider {
     pub fn new() -> Self {
         Self {
             config: LlmConfig {
-                api_key_env_var: "OPENAI_API".to_string(),
-                model: "gpt-3.5-turbo".to_string(),
+                api_key_env_var: OPENAI_API_KEY_ENV.to_string(),
+                model: DEFAULT_OPENAI_MODEL.to_string(),
                 endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
             },
         }
@@ -20,7 +21,7 @@ impl OpenAiProvider {
     pub fn with_model(model: &str) -> Self {
         Self {
             config: LlmConfig {
-                api_key_env_var: "OPENAI_API".to_string(),
+                api_key_env_var: OPENAI_API_KEY_ENV.to_string(),
                 model: model.to_string(),
                 endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
             },

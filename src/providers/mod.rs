@@ -5,15 +5,12 @@
 
 pub mod openai;
 
-pub mod mock;
-
 // Re-export common provider types
 pub use openai::OpenAiProvider;
 
-pub use mock::MockProvider;
-
 use std::env;
 use crate::api::LlmProvider;
+use crate::config::{LLM_PROVIDER_ENV, GPT4_MODEL, PROVIDER_OPENAI, PROVIDER_OPENAI_GPT4};
 
 /// Provider factory for creating LLM providers
 pub struct ProviderFactory;
@@ -21,9 +18,9 @@ pub struct ProviderFactory;
 impl ProviderFactory {
     /// Create provider based on environment variable or default to OpenAI
     pub fn create_provider() -> Box<dyn LlmProvider + Send + Sync> {
-        match env::var("LLM_PROVIDER").as_deref() {
-            Ok("openai") => Box::new(OpenAiProvider::new()),
-            Ok("openai-gpt4") => Box::new(OpenAiProvider::with_model("gpt-4")),
+        match env::var(LLM_PROVIDER_ENV).as_deref() {
+            Ok(PROVIDER_OPENAI) => Box::new(OpenAiProvider::new()),
+            Ok(PROVIDER_OPENAI_GPT4) => Box::new(OpenAiProvider::with_model(GPT4_MODEL)),
             // Future providers can be added here:
             // Ok("claude") => Box::new(claude::ClaudeProvider::new()),
             // Ok("local") => Box::new(local::LocalLlmProvider::new()),

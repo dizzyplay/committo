@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 use std::io;
+use crate::config::CONVENTION_FILE_NAME;
 
 /// Find and build hierarchical prompt from .committoconvention files
 pub fn find_and_build_prompt() -> io::Result<String> {
@@ -8,7 +9,7 @@ pub fn find_and_build_prompt() -> io::Result<String> {
     let current_dir = env::current_dir()?;
 
     for ancestor in current_dir.ancestors() {
-        let convention_path = ancestor.join(".committoconvention");
+        let convention_path = ancestor.join(CONVENTION_FILE_NAME);
         if convention_path.exists() {
             let content = fs::read_to_string(convention_path)?;
             prompt_parts.push(content);
