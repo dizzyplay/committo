@@ -1,6 +1,6 @@
 use committo::providers::{OpenAiProvider, ProviderFactory};
 use committo::api::{LlmProvider, generate_commit_message_with_provider};
-use committo::config::{CONFIG_FILE_NAME, OPENAI_API_KEY_ENV, DEFAULT_OPENAI_MODEL, GPT4_MODEL, LLM_PROVIDER_ENV, PROVIDER_OPENAI, PROVIDER_OPENAI_GPT4};
+use committo::config::{CONFIG_FILE_NAME, OPENAI_API_KEY_ENV, DEFAULT_OPENAI_MODEL, GPT4_MODEL, LLM_PROVIDER_ENV, LLM_MODEL_ENV, PROVIDER_OPENAI};
 use self::providers::MockProvider;
 
 mod providers;
@@ -135,14 +135,20 @@ mod provider_tests {
     #[test]
     #[serial]
     fn test_provider_factory_with_env_var() {
-        // Test with environment variable
-        unsafe { env::set_var(LLM_PROVIDER_ENV, PROVIDER_OPENAI_GPT4); }
+        // Test with environment variable - provider and model
+        unsafe { 
+            env::set_var(LLM_PROVIDER_ENV, PROVIDER_OPENAI);
+            env::set_var(LLM_MODEL_ENV, GPT4_MODEL);
+        }
         let provider = ProviderFactory::create_provider();
         assert_eq!(provider.get_provider_name(), "OpenAI");
         assert_eq!(provider.get_config().model, GPT4_MODEL);
-        unsafe { env::remove_var(LLM_PROVIDER_ENV); }
+        unsafe { 
+            env::remove_var(LLM_PROVIDER_ENV);
+            env::remove_var(LLM_MODEL_ENV);
+        }
         
-        // Test with openai
+        // Test with openai provider only (should use default model)
         unsafe { env::set_var(LLM_PROVIDER_ENV, PROVIDER_OPENAI); }
         let provider = ProviderFactory::create_provider();
         assert_eq!(provider.get_provider_name(), "OpenAI");

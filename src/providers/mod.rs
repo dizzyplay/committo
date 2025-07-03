@@ -10,7 +10,7 @@ pub use openai::OpenAiProvider;
 
 use std::env;
 use crate::api::LlmProvider;
-use crate::config::{LLM_PROVIDER_ENV, GPT4_MODEL, PROVIDER_OPENAI, PROVIDER_OPENAI_GPT4};
+use crate::config::{LLM_PROVIDER_ENV, LLM_MODEL_ENV, DEFAULT_OPENAI_MODEL, PROVIDER_OPENAI};
 
 /// Provider factory for creating LLM providers
 pub struct ProviderFactory;
@@ -19,8 +19,10 @@ impl ProviderFactory {
     /// Create provider based on environment variable or default to OpenAI
     pub fn create_provider() -> Box<dyn LlmProvider + Send + Sync> {
         match env::var(LLM_PROVIDER_ENV).as_deref() {
-            Ok(PROVIDER_OPENAI) => Box::new(OpenAiProvider::new()),
-            Ok(PROVIDER_OPENAI_GPT4) => Box::new(OpenAiProvider::with_model(GPT4_MODEL)),
+            Ok(PROVIDER_OPENAI) => {
+                let model = env::var(LLM_MODEL_ENV).unwrap_or_else(|_| DEFAULT_OPENAI_MODEL.to_string());
+                Box::new(OpenAiProvider::with_model(&model))
+            }
             // Future providers can be added here:
             // Ok("claude") => Box::new(claude::ClaudeProvider::new()),
             // Ok("local") => Box::new(local::LocalLlmProvider::new()),
