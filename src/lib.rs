@@ -1,6 +1,6 @@
 pub mod api;
 mod cli;
-mod config;
+pub mod config;
 mod convention;
 mod git;
 pub mod providers;
@@ -17,7 +17,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             let home_path = home::home_dir().ok_or_else(|| {
                 io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory")
             })?;
-            let config_path = home_path.join(".committorc");
+            let config_path = home_path.join(config::CONFIG_FILE_NAME);
 
             match command {
                 EnvCommands::Set { pair } => {
@@ -36,7 +36,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             let home_path = home::home_dir().ok_or_else(|| {
                 io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory")
             })?;
-            let config_path = home_path.join(".committorc");
+            let config_path = home_path.join(config::CONFIG_FILE_NAME);
             if config_path.exists() {
                 dotenvy::from_path(&config_path).ok();
             }

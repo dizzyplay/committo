@@ -1,5 +1,6 @@
 use committo::providers::{MockProvider, OpenAiProvider, ProviderFactory};
 use committo::api::{LlmProvider, generate_commit_message_with_provider};
+use committo::config::CONFIG_FILE_NAME;
 use std::env;
 use serial_test::serial;
 
@@ -56,7 +57,7 @@ mod provider_tests {
         
         // Test when env var is not set
         unsafe { env::remove_var("MOCK_API_KEY"); }
-        assert_eq!(provider.get_api_key_source(), ".committorc file");
+        assert_eq!(provider.get_api_key_source(), format!("{} file", CONFIG_FILE_NAME));
         
         // Test when env var is set
         unsafe { env::set_var("MOCK_API_KEY", "test_key"); }

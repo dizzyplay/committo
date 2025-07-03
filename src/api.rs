@@ -59,7 +59,7 @@ pub trait LlmProvider: Send + Sync {
     fn get_api_key_source(&self) -> String {
         match env::var(&self.get_config().api_key_env_var) {
             Ok(_) => "Environment variable".to_string(),
-            Err(_) => ".committorc file".to_string(),
+            Err(_) => format!("{} file", crate::config::CONFIG_FILE_NAME),
         }
     }
     

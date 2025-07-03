@@ -2,6 +2,9 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
 
+/// Configuration file name
+pub const CONFIG_FILE_NAME: &str = ".committorc";
+
 /// Handle setting environment variables in config file
 pub fn handle_set_command(pair: &str, config_path: &Path) -> io::Result<()> {
     let parts: Vec<&str> = pair.splitn(2, '=').collect();
@@ -28,7 +31,7 @@ pub fn handle_set_command(pair: &str, config_path: &Path) -> io::Result<()> {
 pub fn show_config(config_path: &Path) -> io::Result<()> {
     if config_path.exists() {
         let content = fs::read_to_string(config_path)?;
-        println!("--- .committorc content ---");
+        println!("--- {} content ---", CONFIG_FILE_NAME);
         let re = regex::Regex::new(r#"^export\s+([A-Z_]+)="(.*)"$"#).unwrap();
         for line in content.lines() {
             if let Some(caps) = re.captures(line) {
@@ -38,7 +41,7 @@ pub fn show_config(config_path: &Path) -> io::Result<()> {
             }
         }
     } else {
-        println!("No .committorc file found at {}.", config_path.display());
+        println!("No {} file found at {}.", CONFIG_FILE_NAME, config_path.display());
     }
     Ok(())
 }
