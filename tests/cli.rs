@@ -51,7 +51,7 @@ fn test_generate_dry_run_with_convention_files() -> Result<(), Box<dyn std::erro
         .stdout(predicate::str::contains("--- Prompt ---"))
         .stdout(predicate::str::contains("1. Root convention"))
         .stdout(predicate::str::contains("2. Subdir convention"))
-        .stdout(predicate::str::contains("Priority follows the numbers: 1 = highest priority"))
+        .stdout(predicate::str::contains("**IMPORTANT PRIORITY RULES:**"))
         .stdout(predicate::str::contains("--- Git Diff ---"))
         .stdout(predicate::str::contains("diff --git a/file.txt b/file.txt"));
 

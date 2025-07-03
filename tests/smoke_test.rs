@@ -107,7 +107,7 @@ fn smoke_test_multiple_files() -> Result<(), Box<dyn std::error::Error>> {
 fn smoke_test_nested_convention_files() -> Result<(), Box<dyn std::error::Error>> {
     let t1 = "1. For the entire project: Use the Conventional Commits format (feat, fix, docs).";
     let t2 = "2. For the frontend: When modifying UI components, the component: prefix is required.";
-    let guideline = "Priority follows the numbers: 1 = highest priority, 2, 3, 4, 5... = lower priority. If there are conflicting instructions, please prioritize the one with the higher priority. Consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
+    let guideline = "**IMPORTANT PRIORITY RULES:**";
     let temp_dir = tempdir()?;
     let git_repo = temp_dir.path().join("test_repo");
     let sub_dir = git_repo.join("frontend");
@@ -201,7 +201,7 @@ fn test_numbered_priority_convention_files() -> Result<(), Box<dyn std::error::E
         .stdout(predicate::str::contains("1. Use Korean for commit messages"))
         .stdout(predicate::str::contains("2. Frontend: Use component prefixes"))
         .stdout(predicate::str::contains("3. Components: Describe UI changes in detail"))
-        .stdout(predicate::str::contains("Priority follows the numbers: 1 = highest priority"))
+        .stdout(predicate::str::contains("**IMPORTANT PRIORITY RULES:**"))
         .stdout(predicate::str::contains("Button.js"));
 
     Ok(())
