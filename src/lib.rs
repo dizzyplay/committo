@@ -109,7 +109,15 @@ fn find_and_build_prompt() -> io::Result<String> {
 
     // The prompts are found from child to parent, so we reverse to get parent-to-child order.
     prompt_parts.reverse();
-    Ok(prompt_parts.join("\n\n"))
+    
+    // Add priority numbers (1 = highest, 2, 3, 4... = lower priority)
+    let numbered_prompts: Vec<String> = prompt_parts
+        .into_iter()
+        .enumerate()
+        .map(|(i, content)| format!("{}. {}", i + 1, content.trim()))
+        .collect();
+    
+    Ok(numbered_prompts.join("\n\n"))
 }
 
 async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, reqwest::Error> {
@@ -118,7 +126,7 @@ async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, re
         Err(_) => ".committorc file",
     };
 
-    let guideline = "The importance of these guidelines increases from top to bottom. Please consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
+    let guideline = "Priority follows the numbers: 1 = highest priority, 2, 3, 4, 5... = lower priority. Please consider this when analyzing the git diff and generate appropriate commit messages accordingly.";
     let custom_conventions = find_and_build_prompt().unwrap_or_default();
     let system_prompt = if custom_conventions.is_empty() {
         "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string()
