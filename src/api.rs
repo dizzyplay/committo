@@ -90,17 +90,22 @@ pub trait LlmProvider: Send + Sync {
     }
     
     /// Main generate commit message method (with dry run support)
-    async fn generate_commit_message(&self, diff: &str, dry_run: bool) -> Result<String, LlmError> {
+    async fn generate_commit_message(&self, diff: &str, dry_run: bool, candidate_count: u32) -> Result<String, LlmError> {
         // Always check API key first, even for dry run
         self.get_api_key()?;
         
         let guideline = "**IMPORTANT PRIORITY RULES:**\n- Numbers indicate priority: 1 = HIGHEST priority, 2, 3, 4, 5... = lower priority\n- When instructions conflict, ALWAYS follow the higher priority (lower number)\n- Apply these rules when analyzing git diff and generating commit messages\n";
         let custom_conventions = find_and_build_prompt().unwrap_or_default();
-        let system_prompt = if custom_conventions.is_empty() {
+        let mut system_prompt = if custom_conventions.is_empty() {
             "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string()
         } else {
             format!("{}\n{}", guideline, custom_conventions)
         };
+
+        // Modify prompt for multiple candidates
+        if candidate_count > 1 {
+            system_prompt = format!("{}\n\nGenerate {} different commit message options. Each message should be on a separate line and be concise and informative.", system_prompt, candidate_count);
+        }
 
         if dry_run {
             self.print_dry_run_info(&system_prompt, diff);
@@ -116,12 +121,13 @@ pub async fn generate_commit_message_with_provider(
     provider: &dyn LlmProvider,
     diff: &str,
     dry_run: bool,
+    candidate_count: u32,
 ) -> Result<String, LlmError> {
-    provider.generate_commit_message(diff, dry_run).await
+    provider.generate_commit_message(diff, dry_run, candidate_count).await
 }
 
 /// Generate commit message using default provider (for backward compatibility)
 pub async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, LlmError> {
     let provider = crate::providers::ProviderFactory::create_provider();
-    generate_commit_message_with_provider(provider.as_ref(), diff, dry_run).await
+    generate_commit_message_with_provider(provider.as_ref(), diff, dry_run, 1).await
 }

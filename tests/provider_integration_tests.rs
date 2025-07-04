@@ -18,7 +18,8 @@ async fn test_mock_provider_integration() -> Result<(), Box<dyn std::error::Erro
     let dry_result = generate_commit_message_with_provider(
         &provider,
         "diff --git a/test.txt b/test.txt\n+new line",
-        true
+        true,
+        1
     ).await?;
     assert_eq!(dry_result, "Dry run complete.");
     
@@ -26,7 +27,8 @@ async fn test_mock_provider_integration() -> Result<(), Box<dyn std::error::Erro
     let result = generate_commit_message_with_provider(
         &provider,
         "diff --git a/test.txt b/test.txt\n+new line",
-        false
+        false,
+        1
     ).await?;
     assert_eq!(result, "feat: add mock integration test");
     
@@ -44,7 +46,8 @@ async fn test_provider_error_handling() -> Result<(), Box<dyn std::error::Error>
     let result = generate_commit_message_with_provider(
         &provider,
         "diff content",
-        false
+        false,
+        1
     ).await;
     
     assert!(result.is_err());
@@ -64,7 +67,8 @@ async fn test_provider_without_api_key() -> Result<(), Box<dyn std::error::Error
     let result = generate_commit_message_with_provider(
         &provider,
         "diff content",
-        false
+        false,
+        1
     ).await;
     
     assert!(result.is_err());

@@ -58,13 +58,26 @@ impl LlmProvider for MockProvider {
         "Mock"
     }
 
-    async fn generate_commit_message_impl(&self, _system_prompt: &str, _diff: &str) -> Result<String, LlmError> {
+    async fn generate_commit_message_impl(&self, system_prompt: &str, _diff: &str) -> Result<String, LlmError> {
         // Check for API key availability (consistent with other providers)
         let _api_key = self.get_api_key()?;
         
         if self.should_fail {
             Err(LlmError::ApiError("Mock API error".to_string()))
         } else {
+            // Check if multiple candidates are requested based on the system prompt
+            if system_prompt.contains("different commit message options") {
+                // Extract the number from the prompt
+                if let Some(count_str) = system_prompt.split("Generate ").nth(1).and_then(|s| s.split(" different").next()) {
+                    if let Ok(count) = count_str.parse::<u32>() {
+                        let mut candidates = Vec::new();
+                        for i in 1..=count {
+                            candidates.push(format!("{} #{}", self.response, i));
+                        }
+                        return Ok(candidates.join("\n"));
+                    }
+                }
+            }
             Ok(self.response.clone())
         }
     }

@@ -1,5 +1,5 @@
-use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
+use std::fs;
+use std::io;
 use std::path::Path;
 
 /// Configuration file name
@@ -13,6 +13,7 @@ pub const OPENAI_API_KEY_ENV: &str = "OPENAI_API_KEY";
 pub const LLM_PROVIDER_ENV: &str = "LLM_PROVIDER";
 pub const LLM_MODEL_ENV: &str = "LLM_MODEL";
 pub const COMMITTO_DEV_ENV: &str = "COMMITTO_DEV";
+pub const CANDIDATE_COUNT_ENV: &str = "CANDIDATE_COUNT";
 
 /// Default OpenAI models
 pub const DEFAULT_OPENAI_MODEL: &str = "gpt-3.5-turbo";
@@ -33,13 +34,45 @@ pub fn handle_set_command(pair: &str, config_path: &Path) -> io::Result<()> {
     let key = parts[0];
     let value = parts[1].trim_matches(|c| c == '\'' || c == '"');
 
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(config_path)?;
-
-    writeln!(file, "export {key}=\"{value}\"")?;
-    println!("Set {key} in {}", config_path.display());
+    // Read existing config if it exists
+    let mut lines = Vec::new();
+    let mut key_found = false;
+    
+    if config_path.exists() {
+        let content = fs::read_to_string(config_path)?;
+        let re = regex::Regex::new(r#"^export\s+([A-Z_]+)=".*"$"#).unwrap();
+        
+        for line in content.lines() {
+            if let Some(caps) = re.captures(line) {
+                if &caps[1] == key {
+                    // Update existing key
+                    lines.push(format!("export {key}=\"{value}\""));
+                    key_found = true;
+                } else {
+                    // Keep other keys unchanged
+                    lines.push(line.to_string());
+                }
+            } else {
+                // Keep non-export lines unchanged
+                lines.push(line.to_string());
+            }
+        }
+    }
+    
+    // If key wasn't found, add it
+    if !key_found {
+        lines.push(format!("export {key}=\"{value}\""));
+    }
+    
+    // Write all lines back to file
+    fs::write(config_path, lines.join("\n") + "\n")?;
+    
+    if key_found {
+        println!("Updated {key} in {}", config_path.display());
+    } else {
+        println!("Set {key} in {}", config_path.display());
+    }
+    
     Ok(())
 }
 

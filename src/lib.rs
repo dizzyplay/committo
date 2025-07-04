@@ -1,9 +1,11 @@
 pub mod api;
 mod cli;
+mod commit;
 pub mod config;
 mod convention;
 mod git;
 pub mod providers;
+mod utils;
 
 pub use cli::{Cli, Commands, EnvCommands};
 
@@ -47,10 +49,50 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                 return Ok(());
             }
 
-            let commit_message = api::generate_commit_message(&diff, effective_dry_run)
+            // Get candidate count from environment variable
+            let candidate_count = env::var(config::CANDIDATE_COUNT_ENV)
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(1);
+
+            let provider = providers::ProviderFactory::create_provider();
+            let response = provider.generate_commit_message(&diff, effective_dry_run, candidate_count)
                 .await
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-            println!("{commit_message}");
+            
+            if effective_dry_run {
+                if candidate_count > 1 {
+                    println!("Dry run: Would generate {} candidates", candidate_count);
+                } else {
+                    println!("{response}");
+                }
+                return Ok(());
+            }
+            
+            // Parse the response into candidates
+            let candidates = utils::parse_commit_message_candidates(&response, candidate_count);
+            
+            if candidates.is_empty() {
+                println!("No commit message candidates generated.");
+                return Ok(());
+            }
+            
+            let selected_message = if candidates.len() == 1 {
+                candidates[0].clone()
+            } else {
+                use dialoguer::Select;
+                let selection = Select::new()
+                    .with_prompt("Select a commit message")
+                    .items(&candidates)
+                    .default(0)
+                    .interact()
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                
+                candidates[selection].clone()
+            };
+            
+            // Default behavior: automatically pipe to git commit --edit -F -
+            commit::execute_git_commit_with_pipe(&selected_message)?;
         }
         Commands::Dev => {
             // Dev command is just an alias for generate --dry-run

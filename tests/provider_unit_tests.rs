@@ -102,7 +102,7 @@ mod provider_tests {
         let provider = MockProvider::with_response("test response");
         
         unsafe { env::set_var(MOCK_API_KEY_ENV, "sk-test123456789"); }
-        let result = provider.generate_commit_message("diff content", true).await;
+        let result = provider.generate_commit_message("diff content", true, 1).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Dry run complete.");
         unsafe { env::remove_var(MOCK_API_KEY_ENV); }
@@ -117,7 +117,8 @@ mod provider_tests {
         let result = generate_commit_message_with_provider(
             &provider,
             "diff content",
-            false
+            false,
+            1
         ).await;
         
         assert!(result.is_ok());
