@@ -4,6 +4,7 @@ use self::providers::MockProvider;
 mod providers;
 use std::env;
 use serial_test::serial;
+use tempfile::TempDir;
 
 const MOCK_API_KEY_ENV: &str = "MOCK_API_KEY";
 
@@ -60,10 +61,17 @@ async fn test_provider_error_handling() -> Result<(), Box<dyn std::error::Error>
 #[tokio::test(flavor = "current_thread")]
 #[serial]
 async fn test_provider_without_api_key() -> Result<(), Box<dyn std::error::Error>> {
-    // Test without API key
-    let provider = MockProvider::new();
+    // Test without API key - use temporary home directory with no config file
+    let temp_home = TempDir::new().unwrap();
+    let _old_home = env::var("HOME");
+    
+    // Set HOME to temp directory (no config file)
+    unsafe { env::set_var("HOME", temp_home.path()); }
+    
+    // Remove environment variable
     unsafe { env::remove_var(MOCK_API_KEY_ENV); }
     
+    let provider = MockProvider::new();
     let result = generate_commit_message_with_provider(
         &provider,
         "diff content",
@@ -71,8 +79,13 @@ async fn test_provider_without_api_key() -> Result<(), Box<dyn std::error::Error
         1
     ).await;
     
+    // Restore HOME
+    if let Ok(old_home) = _old_home {
+        unsafe { env::set_var("HOME", old_home); }
+    }
+    
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains(&format!("{} environment variable not set", MOCK_API_KEY_ENV)));
+    assert!(result.unwrap_err().to_string().contains("API key not found"));
     
     Ok(())
 }

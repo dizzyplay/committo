@@ -15,14 +15,14 @@ fn test_generate_basic_help() {
 }
 
 #[test]
-fn test_env_set_supports_candidate_count() {
+fn test_set_supports_candidate_count() {
     let temp_home = TempDir::new().unwrap();
     
     let mut cmd = Command::cargo_bin("committo").unwrap();
     cmd.env("HOME", temp_home.path())
-        .arg("env")
         .arg("set")
-        .arg("CANDIDATE_COUNT=5");
+        .arg("candidate-count")
+        .arg("5");
     
     // Should not fail due to argument parsing
     let output = cmd.output().unwrap();
@@ -61,10 +61,10 @@ fn test_basic_generate_parsing() {
 }
 
 #[test] 
-fn test_env_command_functionality() {
-    // Test that env command works with CANDIDATE_COUNT
+fn test_set_command_functionality() {
+    // Test that set command works
     let mut cmd = Command::cargo_bin("committo").unwrap();
-    cmd.arg("env")
+    cmd.arg("set")
         .arg("--help");
     
     let output = cmd.output().unwrap();

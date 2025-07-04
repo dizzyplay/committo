@@ -3,14 +3,14 @@ use predicates::prelude::*;
 use tempfile::TempDir;
 
 #[test]
-fn test_env_set_candidate_count() {
+fn test_set_candidate_count() {
     let temp_home = TempDir::new().unwrap();
     
     let mut cmd = Command::cargo_bin("committo").unwrap();
     cmd.env("HOME", temp_home.path())
-        .arg("env")
         .arg("set")
-        .arg("CANDIDATE_COUNT=3");
+        .arg("candidate-count")
+        .arg("3");
     
     // Should not fail due to argument parsing
     let output = cmd.output().unwrap();
@@ -20,33 +20,39 @@ fn test_env_set_candidate_count() {
 }
 
 #[test]
-fn test_help_shows_env_usage() {
+fn test_help_shows_set_usage() {
     let mut cmd = Command::cargo_bin("committo").unwrap();
-    cmd.arg("env")
+    cmd.arg("set")
         .arg("--help");
     
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("environment"));
+        .stdout(predicate::str::contains("config"));
 }
 
 #[test]
-fn test_candidate_count_dry_run() {
-    // Simple test without git setup - just test the CLI option parsing
-    let mut cmd = Command::cargo_bin("committo").unwrap();
-    cmd.arg("generate")
-        .arg("--dry-run")
-        .arg("--candidate-count")
+fn test_candidate_count_with_config() {
+    // Test that candidate count can be set via config and used with generate
+    let temp_home = TempDir::new().unwrap();
+    
+    // First set candidate count in config
+    let mut set_cmd = Command::cargo_bin("committo").unwrap();
+    set_cmd.env("HOME", temp_home.path())
+        .arg("set")
+        .arg("candidate-count")
         .arg("3");
+    set_cmd.assert().success();
     
-    // This should succeed (or fail gracefully) regardless of git repo state
+    // Then test generate with dry-run
+    let mut cmd = Command::cargo_bin("committo").unwrap();
+    cmd.env("HOME", temp_home.path())
+        .arg("generate")
+        .arg("--dry-run");
+    
     let output = cmd.output().unwrap();
-    // We don't assert success because it might fail due to no staged changes
-    // But it should at least parse the arguments correctly
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let _stdout = String::from_utf8_lossy(&output.stdout);
     
-    // Check that the error is about staged changes, not about parsing arguments
+    // Should not have CLI parsing errors
     assert!(!stderr.contains("error parsing command line arguments") && 
             !stderr.contains("Invalid value") &&
             !stderr.contains("unrecognized subcommand"));
@@ -54,50 +60,35 @@ fn test_candidate_count_dry_run() {
 
 #[test]
 fn test_candidate_count_validation() {
-    let mut cmd = Command::cargo_bin("committo").unwrap();
-    cmd.arg("generate")
-        .arg("--candidate-count")
-        .arg("0");
+    let temp_home = TempDir::new().unwrap();
     
-    // This should handle zero gracefully - just don't test assertion for now
-    // We'll allow the command to either succeed or fail with zero
-    cmd.assert();
+    // Test setting invalid candidate count
+    let mut cmd = Command::cargo_bin("committo").unwrap();
+    cmd.env("HOME", temp_home.path())
+        .arg("set")
+        .arg("candidate-count")
+        .arg("invalid");
+    
+    // Should fail with parsing error
+    let output = cmd.output().unwrap();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("must be a number"));
 }
 
 #[test]
-fn test_candidate_count_single_value() {
-    // Simple test without git setup - just test the CLI option parsing
-    let mut cmd = Command::cargo_bin("committo").unwrap();
-    cmd.arg("generate")
-        .arg("--dry-run")
-        .arg("--candidate-count")
-        .arg("1");
+fn test_basic_generate_parsing() {
+    // Test that generate command parses correctly without any config
+    let temp_home = TempDir::new().unwrap();
     
-    // This should succeed (or fail gracefully) regardless of git repo state
+    let mut cmd = Command::cargo_bin("committo").unwrap();
+    cmd.env("HOME", temp_home.path())
+        .arg("generate")
+        .arg("--dry-run");
+    
     let output = cmd.output().unwrap();
     let stderr = String::from_utf8_lossy(&output.stderr);
     
-    // Check that the error is about staged changes, not about parsing arguments
+    // Should not have CLI parsing errors
     assert!(!stderr.contains("error parsing command line arguments") && 
-            !stderr.contains("Invalid value") &&
-            !stderr.contains("unrecognized subcommand"));
-}
-
-#[test]
-fn test_candidate_count_multiple_values() {
-    // Simple test without git setup - just test the CLI option parsing
-    let mut cmd = Command::cargo_bin("committo").unwrap();
-    cmd.arg("generate")
-        .arg("--dry-run")
-        .arg("--candidate-count")
-        .arg("3");
-    
-    // This should succeed (or fail gracefully) regardless of git repo state
-    let output = cmd.output().unwrap();
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    
-    // Check that the error is about staged changes, not about parsing arguments
-    assert!(!stderr.contains("error parsing command line arguments") && 
-            !stderr.contains("Invalid value") &&
             !stderr.contains("unrecognized subcommand"));
 }
