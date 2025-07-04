@@ -1,19 +1,39 @@
 use std::fs;
 use std::io;
 use std::path::Path;
+use serde::{Deserialize, Serialize};
 
 /// Configuration file name
-pub const CONFIG_FILE_NAME: &str = ".committorc";
+pub const CONFIG_FILE_NAME: &str = "committo.toml";
 
 /// Convention file name  
 pub const CONVENTION_FILE_NAME: &str = ".committoconvention";
 
-/// Environment variable names
-pub const OPENAI_API_KEY_ENV: &str = "OPENAI_API_KEY";
-pub const LLM_PROVIDER_ENV: &str = "LLM_PROVIDER";
-pub const LLM_MODEL_ENV: &str = "LLM_MODEL";
-pub const COMMITTO_DEV_ENV: &str = "COMMITTO_DEV";
-pub const CANDIDATE_COUNT_ENV: &str = "CANDIDATE_COUNT";
+/// Configuration structure
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Config {
+    #[serde(rename = "api-key")]
+    pub api_key: Option<String>,
+    
+    #[serde(rename = "candidate-count")]
+    pub candidate_count: Option<u32>,
+    
+    #[serde(rename = "llm-provider")]
+    pub llm_provider: Option<String>,
+    
+    #[serde(rename = "llm-model")]
+    pub llm_model: Option<String>,
+    
+    #[serde(rename = "committo-dev")]
+    pub committo_dev: Option<bool>,
+}
+
+/// Config keys for TOML file
+pub const API_KEY_CONFIG: &str = "api-key";
+pub const LLM_PROVIDER_CONFIG: &str = "llm-provider";
+pub const LLM_MODEL_CONFIG: &str = "llm-model";
+pub const COMMITTO_DEV_CONFIG: &str = "committo-dev";
+pub const CANDIDATE_COUNT_CONFIG: &str = "candidate-count";
 
 /// Default OpenAI models
 pub const DEFAULT_OPENAI_MODEL: &str = "gpt-3.5-turbo";
@@ -22,75 +42,100 @@ pub const GPT4_MODEL: &str = "gpt-4";
 /// Provider identifiers for LLM_PROVIDER environment variable
 pub const PROVIDER_OPENAI: &str = "openai";
 
-/// Handle setting environment variables in config file
-pub fn handle_set_command(pair: &str, config_path: &Path) -> io::Result<()> {
-    let parts: Vec<&str> = pair.splitn(2, '=').collect();
-    if parts.len() != 2 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Invalid format. Please use KEY='value'.",
-        ));
+/// Load config from TOML file
+pub fn load_config(config_path: &Path) -> io::Result<Config> {
+    if !config_path.exists() {
+        return Ok(Config::default());
     }
-    let key = parts[0];
-    let value = parts[1].trim_matches(|c| c == '\'' || c == '"');
+    
+    let content = fs::read_to_string(config_path)?;
+    toml::from_str(&content).map_err(|e| {
+        io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse TOML: {}", e))
+    })
+}
 
-    // Read existing config if it exists
-    let mut lines = Vec::new();
-    let mut key_found = false;
+/// Save config to TOML file
+pub fn save_config(config: &Config, config_path: &Path) -> io::Result<()> {
+    let toml_string = toml::to_string_pretty(config).map_err(|e| {
+        io::Error::new(io::ErrorKind::InvalidData, format!("Failed to serialize TOML: {}", e))
+    })?;
     
-    if config_path.exists() {
-        let content = fs::read_to_string(config_path)?;
-        let re = regex::Regex::new(r#"^export\s+([A-Z_]+)=".*"$"#).unwrap();
-        
-        for line in content.lines() {
-            if let Some(caps) = re.captures(line) {
-                if &caps[1] == key {
-                    // Update existing key
-                    lines.push(format!("export {key}=\"{value}\""));
-                    key_found = true;
-                } else {
-                    // Keep other keys unchanged
-                    lines.push(line.to_string());
-                }
-            } else {
-                // Keep non-export lines unchanged
-                lines.push(line.to_string());
-            }
-        }
-    }
-    
-    // If key wasn't found, add it
-    if !key_found {
-        lines.push(format!("export {key}=\"{value}\""));
-    }
-    
-    // Write all lines back to file
-    fs::write(config_path, lines.join("\n") + "\n")?;
-    
-    if key_found {
-        println!("Updated {key} in {}", config_path.display());
-    } else {
-        println!("Set {key} in {}", config_path.display());
-    }
-    
+    fs::write(config_path, toml_string)?;
     Ok(())
 }
 
-/// Show environment variables from config file
+/// Handle setting config values
+pub fn handle_set_command(key: &str, value: &str, config_path: &Path) -> io::Result<()> {
+    let mut config = load_config(config_path)?;
+    
+    match key {
+        API_KEY_CONFIG => config.api_key = Some(value.to_string()),
+        CANDIDATE_COUNT_CONFIG => {
+            let count: u32 = value.parse().map_err(|_| {
+                io::Error::new(io::ErrorKind::InvalidInput, "candidate-count must be a number")
+            })?;
+            config.candidate_count = Some(count);
+        },
+        LLM_PROVIDER_CONFIG => config.llm_provider = Some(value.to_string()),
+        LLM_MODEL_CONFIG => config.llm_model = Some(value.to_string()),
+        COMMITTO_DEV_CONFIG => {
+            let dev: bool = value.parse().map_err(|_| {
+                io::Error::new(io::ErrorKind::InvalidInput, "committo-dev must be true or false")
+            })?;
+            config.committo_dev = Some(dev);
+        },
+        _ => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("Invalid config key '{}'. Valid keys are: api-key, candidate-count, llm-provider, llm-model, committo-dev", key),
+            ));
+        }
+    }
+    
+    save_config(&config, config_path)?;
+    println!("Set {} = {} in {}", key, value, config_path.display());
+    Ok(())
+}
+
+/// Show config values from TOML file
 pub fn show_config(config_path: &Path) -> io::Result<()> {
     if config_path.exists() {
-        let content = fs::read_to_string(config_path)?;
+        let config = load_config(config_path)?;
         println!("--- {} content ---", CONFIG_FILE_NAME);
-        let re = regex::Regex::new(r#"^export\s+([A-Z_]+)="(.*)"$"#).unwrap();
-        for line in content.lines() {
-            if let Some(caps) = re.captures(line) {
-                println!("{}: {}", &caps[1], &caps[2]);
-            } else {
-                println!("{line}"); // Print lines that don't match the pattern as is
-            }
+        
+        if let Some(api_key) = &config.api_key {
+            println!("api-key = \"{}\"", api_key);
+        }
+        if let Some(count) = config.candidate_count {
+            println!("candidate-count = {}", count);
+        }
+        if let Some(provider) = &config.llm_provider {
+            println!("llm-provider = \"{}\"", provider);
+        }
+        if let Some(model) = &config.llm_model {
+            println!("llm-model = \"{}\"", model);
+        }
+        if let Some(dev) = config.committo_dev {
+            println!("committo-dev = {}", dev);
         }
     } else {
         println!("No {} file found at {}.", CONFIG_FILE_NAME, config_path.display());
     }
     Ok(())
+}
+
+/// Get specific config value
+pub fn get_config_value(config_path: &Path, key: &str) -> io::Result<Option<String>> {
+    let config = load_config(config_path)?;
+    
+    let value = match key {
+        API_KEY_CONFIG => config.api_key,
+        CANDIDATE_COUNT_CONFIG => config.candidate_count.map(|v| v.to_string()),
+        LLM_PROVIDER_CONFIG => config.llm_provider,
+        LLM_MODEL_CONFIG => config.llm_model,
+        COMMITTO_DEV_CONFIG => config.committo_dev.map(|v| v.to_string()),
+        _ => None,
+    };
+    
+    Ok(value)
 }

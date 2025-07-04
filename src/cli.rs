@@ -10,11 +10,15 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug, PartialEq)]
 pub enum Commands {
-    /// Manage environment variables
-    Env {
-        #[command(subcommand)]
-        command: EnvCommands,
+    /// Set a config value
+    Set {
+        /// Config key
+        key: String,
+        /// Config value
+        value: String,
     },
+    /// Show current config
+    Show,
     /// Generate a commit message
     Generate {
         /// Run in dry-run mode to see the generated prompt without calling the API
@@ -23,16 +27,4 @@ pub enum Commands {
     },
     /// Quick dry-run (alias for generate --dry-run)
     Dev,
-}
-
-#[derive(Subcommand, Debug, PartialEq)]
-pub enum EnvCommands {
-    /// Set an environment variable, e.g., OPENAI_API='key'
-    Set {
-        /// The environment variable to set, e.g., OPENAI_API='key'
-        #[arg(value_name = "KEY_VALUE_PAIR")]
-        pair: String,
-    },
-    /// Show current environment variables
-    Show {},
 }

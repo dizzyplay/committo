@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use std::env;
 
 use crate::convention::find_and_build_prompt;
 
@@ -32,7 +31,6 @@ impl std::error::Error for LlmError {}
 /// Configuration for LLM providers
 #[derive(Clone)]
 pub struct LlmConfig {
-    pub api_key_env_var: String,
     pub model: String,
     pub endpoint: String,
 }
@@ -49,18 +47,22 @@ pub trait LlmProvider: Send + Sync {
     /// Generate commit message using this provider (implementation-specific)
     async fn generate_commit_message_impl(&self, system_prompt: &str, diff: &str) -> Result<String, LlmError>;
     
-    /// Get API key from environment or config file
+    /// Get API key from config file only
     fn get_api_key(&self) -> Result<String, LlmError> {
-        env::var(&self.get_config().api_key_env_var)
-            .map_err(|_| LlmError::ConfigError(format!("{} environment variable not set", self.get_config().api_key_env_var)))
+        let home_dir = dirs::home_dir().ok_or_else(|| {
+            LlmError::ConfigError("Could not determine home directory".to_string())
+        })?;
+        let config_path = home_dir.join(crate::config::CONFIG_FILE_NAME);
+        
+        match crate::config::get_config_value(&config_path, crate::config::API_KEY_CONFIG) {
+            Ok(Some(api_key)) if !api_key.is_empty() => Ok(api_key),
+            _ => Err(LlmError::ConfigError(format!("API key not found in config file: {}", config_path.display())))
+        }
     }
     
     /// Get API key source description
     fn get_api_key_source(&self) -> String {
-        match env::var(&self.get_config().api_key_env_var) {
-            Ok(_) => "Environment variable".to_string(),
-            Err(_) => format!("{} file", crate::config::CONFIG_FILE_NAME),
-        }
+        format!("{} file", crate::config::CONFIG_FILE_NAME)
     }
     
     /// Mask API key for display (first 5 chars + asterisks)
@@ -78,7 +80,7 @@ pub trait LlmProvider: Send + Sync {
         println!("Provider: {}", self.get_provider_name());
         println!("API Key Source: {}", self.get_api_key_source());
         
-        if let Ok(api_key) = env::var(&self.get_config().api_key_env_var) {
+        if let Ok(api_key) = self.get_api_key() {
             println!("API Key: {}", self.mask_api_key(&api_key));
         }
         

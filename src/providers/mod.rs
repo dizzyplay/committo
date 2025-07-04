@@ -8,24 +8,37 @@ pub mod openai;
 // Re-export common provider types
 pub use openai::OpenAiProvider;
 
-use std::env;
 use crate::api::LlmProvider;
-use crate::config::{LLM_PROVIDER_ENV, LLM_MODEL_ENV, DEFAULT_OPENAI_MODEL, PROVIDER_OPENAI};
+use crate::config::{LLM_PROVIDER_CONFIG, LLM_MODEL_CONFIG, DEFAULT_OPENAI_MODEL, PROVIDER_OPENAI, CONFIG_FILE_NAME};
 
 /// Provider factory for creating LLM providers
 pub struct ProviderFactory;
 
 impl ProviderFactory {
-    /// Create provider based on environment variable or default to OpenAI
+    /// Create provider based on config file or default to OpenAI
     pub fn create_provider() -> Box<dyn LlmProvider + Send + Sync> {
-        match env::var(LLM_PROVIDER_ENV).as_deref() {
-            Ok(PROVIDER_OPENAI) => {
-                let model = env::var(LLM_MODEL_ENV).unwrap_or_else(|_| DEFAULT_OPENAI_MODEL.to_string());
-                Box::new(OpenAiProvider::with_model(&model))
-            }
+        let home_dir = match dirs::home_dir() {
+            Some(dir) => dir,
+            None => return Box::new(OpenAiProvider::new()), // Default if no home
+        };
+        
+        let config_path = home_dir.join(CONFIG_FILE_NAME);
+        
+        let provider_name = crate::config::get_config_value(&config_path, LLM_PROVIDER_CONFIG)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| PROVIDER_OPENAI.to_string());
+            
+        let model = crate::config::get_config_value(&config_path, LLM_MODEL_CONFIG)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| DEFAULT_OPENAI_MODEL.to_string());
+        
+        match provider_name.as_str() {
+            PROVIDER_OPENAI => Box::new(OpenAiProvider::with_model(&model)),
             // Future providers can be added here:
-            // Ok("claude") => Box::new(claude::ClaudeProvider::new()),
-            // Ok("local") => Box::new(local::LocalLlmProvider::new()),
+            // "claude" => Box::new(claude::ClaudeProvider::new()),
+            // "local" => Box::new(local::LocalLlmProvider::new()),
             _ => Box::new(OpenAiProvider::new()), // Default
         }
     }
