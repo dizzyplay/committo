@@ -86,15 +86,15 @@ impl LlmProvider for OpenAiProvider {
             .ok_or_else(|| LlmError::ConfigError("API key not found in config".to_string()))
     }
 
+    fn get_app_config(&self) -> &Config {
+        &self.app_config
+    }
+
     fn get_candidate_count(&self) -> u32 {
         self.app_config.candidate_count.unwrap_or(1)
     }
 
     fn get_dev_mode(&self) -> bool {
         self.app_config.committo_dev.unwrap_or(false)
-    }
-    
-    fn get_app_config(&self) -> &Config {
-        &self.app_config
     }
 }
