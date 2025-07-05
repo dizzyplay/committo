@@ -99,10 +99,10 @@ pub trait LlmProvider: Send + Sync {
             return Ok("Dry run complete.".to_string());
         }
 
-        let mut sp = Spinner::new(Spinners::BouncingBall, "Your next legendary commit, coming right up..!".into());
+        let mut sp = Spinner::new(Spinners::BouncingBall, "Your next legendary commit, coming right up!!!".into());
         let response= self.generate_commit_message_impl(&system_prompt, diff).await;
         sp.stop_and_persist("✔", "How about these? ".into());
-        return response
+        response
     }
 }
 
@@ -117,7 +117,7 @@ pub async fn generate_commit_message_with_provider(
 
 /// Generate commit message using default provider (for backward compatibility)
 pub async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, LlmError> {
-    let config = crate::config::Config::default();
+    let config = Config::default();
     let provider = crate::providers::ProviderFactory::create_provider(config);
     generate_commit_message_with_provider(provider.as_ref(), diff, dry_run).await
 }
