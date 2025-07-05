@@ -82,7 +82,7 @@ pub trait LlmProvider: Send + Sync {
         
         let guideline = "**IMPORTANT PRIORITY RULES:**\n- Numbers indicate priority: 1 = HIGHEST priority, 2, 3, 4, 5... = lower priority\n- When instructions conflict, ALWAYS follow the higher priority (lower number)\n- Apply these rules when analyzing git diff and generating commit messages\n";
         let custom_conventions = find_and_build_prompt().unwrap_or_default();
-        let default_system_prompt = "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string();
+        let default_system_prompt = "You are an AI assistant that helps programmers who struggle with writing commit messages. You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string();
         let mut system_prompt = if custom_conventions.is_empty() {
             default_system_prompt
         } else {
@@ -91,7 +91,7 @@ pub trait LlmProvider: Send + Sync {
 
         // Modify prompt for multiple candidates
         if candidate_count > 1 {
-            system_prompt = format!("{}\n\nGenerate {} different commit message options. Each message should be on a separate line and be concise and informative.", system_prompt, candidate_count);
+            system_prompt = format!("{}\n\nGenerate {} different commit message options. Commit messages must be separated by line, and generate exactly the number I request. Each message should be on a separate line and be concise and informative.", system_prompt, candidate_count);
         }
 
         if dry_run {
