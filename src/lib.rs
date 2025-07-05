@@ -40,7 +40,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                 return Ok(());
             }
 
-            let response = provider.generate_commit_message(&diff, effective_dry_run)
+            let mut response = provider.generate_commit_message(&diff, effective_dry_run)
                 .await
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
             
@@ -54,27 +54,63 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                 return Ok(());
             }
             
-            // Parse the response into candidates
+            // Parse the response into candidates and handle selection with retry
             let candidate_count = provider.get_candidate_count();
-            let candidates = utils::parse_commit_message_candidates(&response, candidate_count);
-            
-            if candidates.is_empty() {
-                println!("No commit message candidates generated.");
-                return Ok(());
-            }
-            
-            let selected_message = if candidates.len() == 1 {
-                candidates[0].clone()
-            } else {
-                use dialoguer::Select;
-                let selection = Select::new()
-                    .with_prompt("Select a commit message")
-                    .items(&candidates)
-                    .default(0)
-                    .interact()
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            let selected_message = loop {
+                let candidates = utils::parse_commit_message_candidates(&response, candidate_count);
                 
-                candidates[selection].clone()
+                if candidates.is_empty() {
+                    println!("No commit message candidates generated.");
+                    return Ok(());
+                }
+                
+                if candidates.len() == 1 {
+                    // Single candidate - ask if user wants to retry or use it
+                    use dialoguer::Select;
+                    let options = vec!["🔄 Retry (generate new message)", &candidates[0]];
+                    let selection = Select::new()
+                        .with_prompt("Select an option")
+                        .items(&options)
+                        .default(1) // Default to the generated message
+                        .interact()
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                    
+                    if selection == 0 {
+                        // Retry - generate new message
+                        println!("🔄 Generating new commit message...");
+                        let new_response = provider.generate_commit_message(&diff, false)
+                            .await
+                            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                        response = new_response;
+                        continue;
+                    } else {
+                        break candidates[0].clone();
+                    }
+                } else {
+                    // Multiple candidates - add retry option at the top
+                    use dialoguer::Select;
+                    let mut options = vec!["🔄 Retry (generate new messages)".to_string()];
+                    options.extend(candidates.iter().cloned());
+                    
+                    let selection = Select::new()
+                        .with_prompt("Select a commit message")
+                        .items(&options)
+                        .default(1) // Default to first generated message
+                        .interact()
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                    
+                    if selection == 0 {
+                        // Retry - generate new messages
+                        println!("🔄 Generating new commit messages...");
+                        let new_response = provider.generate_commit_message(&diff, false)
+                            .await
+                            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                        response = new_response;
+                        continue;
+                    } else {
+                        break candidates[selection - 1].clone();
+                    }
+                }
             };
             
             // Default behavior: automatically pipe to git commit --edit -F -
