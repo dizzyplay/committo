@@ -129,6 +129,7 @@ pub async fn generate_commit_message_with_provider(
 
 /// Generate commit message using default provider (for backward compatibility)
 pub async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, LlmError> {
-    let provider = crate::providers::ProviderFactory::create_provider();
+    let config = crate::config::Config::default();
+    let provider = crate::providers::ProviderFactory::create_provider(config);
     generate_commit_message_with_provider(provider.as_ref(), diff, dry_run).await
 }

@@ -164,6 +164,87 @@ pub fn show_config(config_path: &Path) -> io::Result<()> {
     Ok(())
 }
 
+/// Load or create config with interactive setup if needed
+pub fn load_or_create_config(config_path: &Path) -> io::Result<Config> {
+    if config_path.exists() {
+        load_config(config_path)
+    } else {
+        println!("No configuration file found at: {}", config_path.display());
+        println!("Let's set up your configuration interactively!");
+        
+        interactive_setup(config_path)
+    }
+}
+
+/// Interactive configuration setup
+fn interactive_setup(config_path: &Path) -> io::Result<Config> {
+    use dialoguer::{Input, Select, Confirm};
+    
+    println!("\n=== Committo Configuration Setup ===");
+    
+    // API Key setup
+    let api_key: String = Input::new()
+        .with_prompt("Enter your OpenAI API key")
+        .interact_text()
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    
+    // Provider selection
+    let providers = vec!["openai"];
+    let provider_selection = Select::new()
+        .with_prompt("Select LLM provider")
+        .items(&providers)
+        .default(0)
+        .interact()
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    
+    // Model selection
+    let models = match providers[provider_selection] {
+        "openai" => vec!["gpt-3.5-turbo", "gpt-4"],
+        _ => vec!["gpt-3.5-turbo"],
+    };
+    
+    let model_selection = Select::new()
+        .with_prompt("Select model")
+        .items(&models)
+        .default(0)
+        .interact()
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    
+    // Candidate count
+    let candidate_count: u32 = Input::new()
+        .with_prompt("Number of commit message candidates")
+        .default(1)
+        .interact_text()
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    
+    // Dev mode
+    let dev_mode = Confirm::new()
+        .with_prompt("Enable development mode (dry-run by default)?")
+        .default(false)
+        .interact()
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    
+    let config = Config {
+        api_key: Some(api_key),
+        llm_provider: Some(providers[provider_selection].to_string()),
+        llm_model: Some(models[model_selection].to_string()),
+        candidate_count: Some(candidate_count),
+        committo_dev: Some(dev_mode),
+    };
+    
+    // Create parent directory if needed
+    if let Some(parent) = config_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    
+    save_config(&config, config_path)?;
+    
+    println!("\n✅ Configuration saved to: {}", config_path.display());
+    println!("You can modify it later using 'committo set <key> <value>' or by editing the file directly.");
+    
+    Ok(config)
+}
+
 /// Get specific config value
 pub fn get_config_value(config_path: &Path, key: &str) -> io::Result<Option<String>> {
     let config = load_config(config_path)?;

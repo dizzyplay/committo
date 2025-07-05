@@ -13,23 +13,23 @@ use std::io;
 
 /// Main application runner
 pub async fn run(cli: Cli) -> io::Result<()> {
+    // Get home directory and config path
+    let home_path = home::home_dir().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory")
+    })?;
+    let config_path = home_path.join(config::CONFIG_FILE_NAME);
+
     match cli.command {
         Commands::Set { key, value } => {
-            let home_path = home::home_dir().ok_or_else(|| {
-                io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory")
-            })?;
-            let config_path = home_path.join(config::CONFIG_FILE_NAME);
             config::handle_set_command(&key, &value, &config_path)?;
         }
         Commands::Show => {
-            let home_path = home::home_dir().ok_or_else(|| {
-                io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory")
-            })?;
-            let config_path = home_path.join(config::CONFIG_FILE_NAME);
             config::show_config(&config_path)?;
         }
         Commands::Generate { dry_run } => {
-            let provider = providers::ProviderFactory::create_provider();
+            // Load or create config with interactive setup
+            let app_config = config::load_or_create_config(&config_path)?;
+            let provider = providers::ProviderFactory::create_provider(app_config);
             
             // Get effective dry run mode (CLI flag or config dev mode)
             let effective_dry_run = dry_run || provider.get_dev_mode();

@@ -9,25 +9,14 @@ pub mod openai;
 pub use openai::OpenAiProvider;
 
 use crate::api::LlmProvider;
-use crate::config::{DEFAULT_OPENAI_MODEL, PROVIDER_OPENAI, CONFIG_FILE_NAME, Config, ConfigProvider, load_config};
+use crate::config::{DEFAULT_OPENAI_MODEL, PROVIDER_OPENAI, Config, ConfigProvider};
 
 /// Provider factory for creating LLM providers
 pub struct ProviderFactory;
 
 impl ProviderFactory {
-    /// Create provider based on config file or default to OpenAI
-    pub fn create_provider() -> Box<dyn LlmProvider + Send + Sync> {
-        let home_dir = match dirs::home_dir() {
-            Some(dir) => dir,
-            None => {
-                let config = Config::default();
-                return Box::new(OpenAiProvider::new(Box::new(config)));
-            }
-        };
-        
-        let config_path = home_dir.join(CONFIG_FILE_NAME);
-        let config = load_config(&config_path).unwrap_or_default();
-        
+    /// Create provider based on provided config
+    pub fn create_provider(config: Config) -> Box<dyn LlmProvider + Send + Sync> {
         let provider_name = config.get_llm_provider().unwrap_or_else(|| PROVIDER_OPENAI.to_string());
         let model = config.get_llm_model().unwrap_or_else(|| DEFAULT_OPENAI_MODEL.to_string());
         
@@ -40,33 +29,13 @@ impl ProviderFactory {
         }
     }
     
-    /// Create specific OpenAI provider (for dependency injection)
-    pub fn create_openai() -> Box<dyn LlmProvider + Send + Sync> {
-        let home_dir = match dirs::home_dir() {
-            Some(dir) => dir,
-            None => {
-                let config = Config::default();
-                return Box::new(OpenAiProvider::new(Box::new(config)));
-            }
-        };
-        
-        let config_path = home_dir.join(CONFIG_FILE_NAME);
-        let config = load_config(&config_path).unwrap_or_default();
+    /// Create specific OpenAI provider with config
+    pub fn create_openai(config: Config) -> Box<dyn LlmProvider + Send + Sync> {
         Box::new(OpenAiProvider::new(Box::new(config)))
     }
     
-    /// Create OpenAI provider with specific model
-    pub fn create_openai_with_model(model: &str) -> Box<dyn LlmProvider + Send + Sync> {
-        let home_dir = match dirs::home_dir() {
-            Some(dir) => dir,
-            None => {
-                let config = Config::default();
-                return Box::new(OpenAiProvider::with_model(Box::new(config), model));
-            }
-        };
-        
-        let config_path = home_dir.join(CONFIG_FILE_NAME);
-        let config = load_config(&config_path).unwrap_or_default();
+    /// Create OpenAI provider with specific model and config
+    pub fn create_openai_with_model(config: Config, model: &str) -> Box<dyn LlmProvider + Send + Sync> {
         Box::new(OpenAiProvider::with_model(Box::new(config), model))
     }
 }

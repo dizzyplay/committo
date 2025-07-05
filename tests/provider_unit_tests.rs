@@ -105,17 +105,19 @@ mod provider_tests {
     #[test]
     fn test_provider_factory_default() {
         // Test default provider creation
-        let provider = ProviderFactory::create_provider();
+        let config = Config::default();
+        let provider = ProviderFactory::create_provider(config);
         assert_eq!(provider.get_provider_name(), "OpenAI");
     }
 
     #[test]
     fn test_provider_factory_specific_methods() {
-        let provider = ProviderFactory::create_openai();
+        let config = Config::default();
+        let provider = ProviderFactory::create_openai(config.clone());
         assert_eq!(provider.get_provider_name(), "OpenAI");
         assert_eq!(provider.get_config().model, DEFAULT_OPENAI_MODEL);
         
-        let provider = ProviderFactory::create_openai_with_model("gpt-4-turbo");
+        let provider = ProviderFactory::create_openai_with_model(config, "gpt-4-turbo");
         assert_eq!(provider.get_provider_name(), "OpenAI");
         assert_eq!(provider.get_config().model, "gpt-4-turbo");
     }
