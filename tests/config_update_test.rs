@@ -112,6 +112,6 @@ fn test_show_command() {
     
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("api-key = \"test123\""))
-        .stdout(predicate::str::contains("candidate-count = 3"));
+        .stdout(predicate::str::contains("Api Key : \"test1**\" (masked)"))
+        .stdout(predicate::str::contains("Candidate Count : 3"));
 }

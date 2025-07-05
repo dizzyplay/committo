@@ -1,8 +1,9 @@
 use committo::api::generate_commit_message_with_provider;
+use committo::config::Config;
 
 #[path = "common/mock.rs"]
 mod mock;
-use mock::{MockProvider, MockConfig};
+use mock::MockProvider;
 
 #[tokio::test]
 async fn test_mock_provider_integration() -> Result<(), Box<dyn std::error::Error>> {
@@ -46,10 +47,12 @@ async fn test_provider_error_handling() -> Result<(), Box<dyn std::error::Error>
 #[tokio::test]
 async fn test_provider_without_api_key() -> Result<(), Box<dyn std::error::Error>> {
     // Test without API key
-    let config = MockConfig {
+    let config = Config {
         api_key: None,
         candidate_count: Some(1),
-        dev_mode: Some(false),
+        llm_provider: Some("mock".to_string()),
+        llm_model: Some("mock-model".to_string()),
+        committo_dev: Some(false),
     };
     let provider = MockProvider::with_config(config);
 

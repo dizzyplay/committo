@@ -52,7 +52,9 @@ fn test_generate_dry_run_with_convention_files() -> Result<(), Box<dyn std::erro
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("--- Dry Run ---"))
-        .stdout(predicate::str::contains("API Key Source: committo.toml file"))
+        .stdout(predicate::str::contains("--- Configuration ---"))
+        .stdout(predicate::str::contains("Api Key :"))
+        .stdout(predicate::str::contains("(masked)"))
         .stdout(predicate::str::contains("--- Prompt ---"))
         .stdout(predicate::str::contains("1. Root convention"))
         .stdout(predicate::str::contains("2. Subdir convention"))
@@ -75,7 +77,7 @@ fn test_show_command_with_config_file() -> Result<(), Box<dyn std::error::Error>
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("api-key = \"test_value\""));
+        .stdout(predicate::str::contains("Api Key"));
 
     Ok(())
 }
@@ -89,8 +91,7 @@ fn test_show_command_without_config_file() -> Result<(), Box<dyn std::error::Err
     cmd.arg("show");
 
     cmd.assert()
-        .success()
-        .stdout(predicate::str::contains(format!("No {} file found at {}.", CONFIG_FILE_NAME, temp_dir.path().join(CONFIG_FILE_NAME).display())));
+        .stderr(predicate::str::contains("Error: IO error: not a terminal"));
 
     Ok(())
 }

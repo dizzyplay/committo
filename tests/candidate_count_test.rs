@@ -51,9 +51,9 @@ fn test_candidate_count_with_config() {
     
     let output = cmd.output().unwrap();
     let stderr = String::from_utf8_lossy(&output.stderr);
-    
+
     // Should not have CLI parsing errors
-    assert!(!stderr.contains("error parsing command line arguments") && 
+    assert!(!stderr.contains("error parsing command line arguments") &&
             !stderr.contains("Invalid value") &&
             !stderr.contains("unrecognized subcommand"));
 }

@@ -68,6 +68,196 @@ impl ConfigProvider for Config {
     }
 }
 
+impl Config {
+    /// Create new config instance, loading from file or creating interactively if needed
+    pub fn new(config_path: &Path) -> io::Result<(Config, std::path::PathBuf)> {
+        let config_path_buf = config_path.to_path_buf();
+        
+        let config = if config_path.exists() {
+            Config::load(config_path)?
+        } else {
+            println!("No configuration file found at: {}", config_path.display());
+            println!("Let's set up your configuration interactively!");
+            
+            Config::interactive_setup(config_path)?
+        };
+        
+        Ok((config, config_path_buf))
+    }
+
+    /// Load config from TOML file (assumes file exists)
+    fn load(config_path: &Path) -> io::Result<Config> {
+        let content = fs::read_to_string(config_path)?;
+        toml::from_str(&content).map_err(|e| {
+            io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse TOML: {}", e))
+        })
+    }
+
+    /// Save config to TOML file
+    pub fn save(&self, config_path: &Path) -> io::Result<()> {
+        let toml_string = toml::to_string_pretty(self).map_err(|e| {
+            io::Error::new(io::ErrorKind::InvalidData, format!("Failed to serialize TOML: {}", e))
+        })?;
+        
+        fs::write(config_path, toml_string)?;
+        Ok(())
+    }
+
+    /// Set a config value
+    pub fn set_value(&mut self, key: &str, value: &str) -> io::Result<()> {
+        match key {
+            API_KEY_CONFIG => self.api_key = Some(value.to_string()),
+            CANDIDATE_COUNT_CONFIG => {
+                let count: u32 = value.parse().map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidInput, "candidate-count must be a number")
+                })?;
+                self.candidate_count = Some(count);
+            },
+            LLM_PROVIDER_CONFIG => self.llm_provider = Some(value.to_string()),
+            LLM_MODEL_CONFIG => self.llm_model = Some(value.to_string()),
+            COMMITTO_DEV_CONFIG => {
+                let dev: bool = value.parse().map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidInput, "committo-dev must be true or false")
+                })?;
+                self.committo_dev = Some(dev);
+            },
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("Invalid config key '{}'. Valid keys are: api-key, candidate-count, llm-provider, llm-model, committo-dev", key),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// Handle setting config values and save
+    pub fn set_and_save(&mut self, key: &str, value: &str, config_path: &Path) -> io::Result<()> {
+        self.set_value(key, value)?;
+        self.save(config_path)?;
+        println!("Set {} = {} in {}", key, value, config_path.display());
+        Ok(())
+    }
+
+    /// Show config values
+    pub fn show(&self) -> io::Result<()> {
+        print!("{}", self.show_masking_config());
+        Ok(())
+    }
+
+    /// Static method for handling set command (for backwards compatibility)
+    pub fn handle_set_command(key: &str, value: &str, config_path: &Path) -> io::Result<()> {
+        let mut config = if config_path.exists() {
+            Config::load(config_path)?
+        } else {
+            Config::default()
+        };
+        config.set_and_save(key, value, config_path)
+    }
+
+    /// Interactive configuration setup
+    fn interactive_setup(config_path: &Path) -> io::Result<Config> {
+        use dialoguer::{Input, Select, Confirm};
+        
+        println!("\n=== Committo Configuration Setup ===");
+        
+        // API Key setup
+        let api_key: String = Input::new()
+            .with_prompt("Enter your OpenAI API key")
+            .interact_text()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        
+        // Provider selection
+        let providers = vec!["openai"];
+        let provider_selection = Select::new()
+            .with_prompt("Select LLM provider")
+            .items(&providers)
+            .default(0)
+            .interact()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        
+        // Model selection
+        let models = match providers[provider_selection] {
+            "openai" => vec!["gpt-3.5-turbo", "gpt-4", "gpt-4.1-mini-2025-04-14"],
+            _ => vec!["gpt-3.5-turbo"],
+        };
+        
+        let model_selection = Select::new()
+            .with_prompt("Select model")
+            .items(&models)
+            .default(0)
+            .interact()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        
+        // Candidate count
+        let candidate_count: u32 = Input::new()
+            .with_prompt("Number of commit message candidates")
+            .default(5)
+            .interact_text()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        
+        // Dev mode
+        let dev_mode = Confirm::new()
+            .with_prompt("Enable development mode (dry-run by default)?")
+            .default(false)
+            .interact()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        
+        let config = Config {
+            api_key: Some(api_key),
+            llm_provider: Some(providers[provider_selection].to_string()),
+            llm_model: Some(models[model_selection].to_string()),
+            candidate_count: Some(candidate_count),
+            committo_dev: Some(dev_mode),
+        };
+        
+        // Create parent directory if needed
+        if let Some(parent) = config_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        
+        config.save(config_path)?;
+        
+        println!("\n✅ Configuration saved to: {}", config_path.display());
+        println!("You can modify it later using 'committo set <key> <value>' or by editing the file directly.");
+        
+        Ok(config)
+    }
+    
+    /// Mask API key for secure display
+    pub fn mask_api_key(&self, api_key: &str) -> String {
+        if api_key.len() >= 5 {
+            format!("{}{}", &api_key[..5], "*".repeat(api_key.len() - 5))
+        } else {
+            "*".repeat(api_key.len())
+        }
+    }
+    
+    /// Show config in dry run format
+    pub fn show_masking_config(&self) -> String {
+        let mut output = String::new();
+        output.push_str("--- Configuration ---\n");
+        
+        if let Some(api_key) = &self.api_key {
+            output.push_str(&format!("Api Key : \"{}\" (masked)\n", self.mask_api_key(api_key)));
+        }
+        if let Some(count) = self.candidate_count {
+            output.push_str(&format!("Candidate Count : {}\n", count));
+        }
+        if let Some(provider) = &self.llm_provider {
+            output.push_str(&format!("LLM Provider : \"{}\"\n", provider));
+        }
+        if let Some(model) = &self.llm_model {
+            output.push_str(&format!("LLM Model : \"{}\"\n", model));
+        }
+        if let Some(dev) = self.committo_dev {
+            output.push_str(&format!("Dev : {}\n", dev));
+        }
+        
+        output
+    }
+}
+
 /// Config keys for TOML file
 pub const API_KEY_CONFIG: &str = "api-key";
 pub const LLM_PROVIDER_CONFIG: &str = "llm-provider";
@@ -82,172 +272,9 @@ pub const GPT4_MODEL: &str = "gpt-4";
 /// Provider identifiers for LLM_PROVIDER environment variable
 pub const PROVIDER_OPENAI: &str = "openai";
 
-/// Load config from TOML file
-pub fn load_config(config_path: &Path) -> io::Result<Config> {
-    if !config_path.exists() {
-        return Ok(Config::default());
-    }
-    
-    let content = fs::read_to_string(config_path)?;
-    toml::from_str(&content).map_err(|e| {
-        io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse TOML: {}", e))
-    })
-}
-
-/// Save config to TOML file
-pub fn save_config(config: &Config, config_path: &Path) -> io::Result<()> {
-    let toml_string = toml::to_string_pretty(config).map_err(|e| {
-        io::Error::new(io::ErrorKind::InvalidData, format!("Failed to serialize TOML: {}", e))
-    })?;
-    
-    fs::write(config_path, toml_string)?;
-    Ok(())
-}
-
-/// Handle setting config values
-pub fn handle_set_command(key: &str, value: &str, config_path: &Path) -> io::Result<()> {
-    let mut config = load_config(config_path)?;
-    
-    match key {
-        API_KEY_CONFIG => config.api_key = Some(value.to_string()),
-        CANDIDATE_COUNT_CONFIG => {
-            let count: u32 = value.parse().map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidInput, "candidate-count must be a number")
-            })?;
-            config.candidate_count = Some(count);
-        },
-        LLM_PROVIDER_CONFIG => config.llm_provider = Some(value.to_string()),
-        LLM_MODEL_CONFIG => config.llm_model = Some(value.to_string()),
-        COMMITTO_DEV_CONFIG => {
-            let dev: bool = value.parse().map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidInput, "committo-dev must be true or false")
-            })?;
-            config.committo_dev = Some(dev);
-        },
-        _ => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Invalid config key '{}'. Valid keys are: api-key, candidate-count, llm-provider, llm-model, committo-dev", key),
-            ));
-        }
-    }
-    
-    save_config(&config, config_path)?;
-    println!("Set {} = {} in {}", key, value, config_path.display());
-    Ok(())
-}
-
-/// Show config values from TOML file
-pub fn show_config(config_path: &Path) -> io::Result<()> {
-    if config_path.exists() {
-        let config = load_config(config_path)?;
-        println!("--- {} content ---", CONFIG_FILE_NAME);
-
-        if let Some(api_key) = &config.api_key {
-            println!("api-key = \"{}\"", api_key);
-        }
-        if let Some(count) = config.candidate_count {
-            println!("candidate-count = {}", count);
-        }
-        if let Some(provider) = &config.llm_provider {
-            println!("llm-provider = \"{}\"", provider);
-        }
-        if let Some(model) = &config.llm_model {
-            println!("llm-model = \"{}\"", model);
-        }
-        if let Some(dev) = config.committo_dev {
-            println!("committo-dev = {}", dev);
-        }
-    } else {
-        println!("No {} file found at {}.", CONFIG_FILE_NAME, config_path.display());
-    }
-    Ok(())
-}
-
-/// Load or create config with interactive setup if needed
-pub fn load_or_create_config(config_path: &Path) -> io::Result<Config> {
-    if config_path.exists() {
-        load_config(config_path)
-    } else {
-        println!("No configuration file found at: {}", config_path.display());
-        println!("Let's set up your configuration interactively!");
-        
-        interactive_setup(config_path)
-    }
-}
-
-/// Interactive configuration setup
-fn interactive_setup(config_path: &Path) -> io::Result<Config> {
-    use dialoguer::{Input, Select, Confirm};
-    
-    println!("\n=== Committo Configuration Setup ===");
-    
-    // API Key setup
-    let api_key: String = Input::new()
-        .with_prompt("Enter your OpenAI API key")
-        .interact_text()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    
-    // Provider selection
-    let providers = vec!["openai"];
-    let provider_selection = Select::new()
-        .with_prompt("Select LLM provider")
-        .items(&providers)
-        .default(0)
-        .interact()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    
-    // Model selection
-    let models = match providers[provider_selection] {
-        "openai" => vec!["gpt-3.5-turbo", "gpt-4", "gpt-4.1-mini-2025-04-14"],
-        _ => vec!["gpt-3.5-turbo"],
-    };
-    
-    let model_selection = Select::new()
-        .with_prompt("Select model")
-        .items(&models)
-        .default(0)
-        .interact()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    
-    // Candidate count
-    let candidate_count: u32 = Input::new()
-        .with_prompt("Number of commit message candidates")
-        .default(5)
-        .interact_text()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    
-    // Dev mode
-    let dev_mode = Confirm::new()
-        .with_prompt("Enable development mode (dry-run by default)?")
-        .default(false)
-        .interact()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    
-    let config = Config {
-        api_key: Some(api_key),
-        llm_provider: Some(providers[provider_selection].to_string()),
-        llm_model: Some(models[model_selection].to_string()),
-        candidate_count: Some(candidate_count),
-        committo_dev: Some(dev_mode),
-    };
-    
-    // Create parent directory if needed
-    if let Some(parent) = config_path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    
-    save_config(&config, config_path)?;
-    
-    println!("\n✅ Configuration saved to: {}", config_path.display());
-    println!("You can modify it later using 'committo set <key> <value>' or by editing the file directly.");
-    
-    Ok(config)
-}
-
 /// Get specific config value
 pub fn get_config_value(config_path: &Path, key: &str) -> io::Result<Option<String>> {
-    let config = load_config(config_path)?;
+    let config = Config::load(config_path)?;
     
     let value = match key {
         API_KEY_CONFIG => config.api_key,

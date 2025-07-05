@@ -18,18 +18,20 @@ pub async fn run(cli: Cli) -> io::Result<()> {
         io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory")
     })?;
     let config_path = home_path.join(config::CONFIG_FILE_NAME);
-
     match cli.command {
         Commands::Set { key, value } => {
-            config::handle_set_command(&key, &value, &config_path)?;
+            // Set command doesn't need interactive setup - just use static method
+            config::Config::handle_set_command(&key, &value, &config_path)?;
         }
         Commands::Show => {
-            config::show_config(&config_path)?;
+            // Create config instance - this will handle setup if needed
+            let (config, _) = config::Config::new(&config_path)?;
+            config.show()?;
         }
         Commands::Generate { dry_run } => {
-            // Load or create config with interactive setup
-            let app_config = config::load_or_create_config(&config_path)?;
-            let provider = providers::ProviderFactory::create_provider(app_config);
+            // Create config instance - this will handle setup if needed
+            let (config, _) = config::Config::new(&config_path)?;
+            let provider = providers::ProviderFactory::create_provider(config);
             
             // Get effective dry run mode (CLI flag or config dev mode)
             let effective_dry_run = dry_run || provider.get_dev_mode();

@@ -1,51 +1,11 @@
 use async_trait::async_trait;
-use committo::config::ConfigProvider;
+use committo::config::Config;
 use committo::api::{LlmConfig, LlmError, LlmProvider};
-
-/// Mock config for testing
-#[derive(Debug, Clone)]
-pub struct MockConfig {
-    pub api_key: Option<String>,
-    pub candidate_count: Option<u32>,
-    pub dev_mode: Option<bool>,
-}
-
-impl Default for MockConfig {
-    fn default() -> Self {
-        Self {
-            api_key: Some("test_key".to_string()),
-            candidate_count: Some(1),
-            dev_mode: Some(false),
-        }
-    }
-}
-
-impl ConfigProvider for MockConfig {
-    fn get_api_key(&self) -> Option<String> {
-        self.api_key.clone()
-    }
-    
-    fn get_llm_provider(&self) -> Option<String> {
-        Some("mock".to_string())
-    }
-    
-    fn get_llm_model(&self) -> Option<String> {
-        Some("mock-model".to_string())
-    }
-    
-    fn get_candidate_count(&self) -> Option<u32> {
-        self.candidate_count
-    }
-    
-    fn get_dev_mode(&self) -> Option<bool> {
-        self.dev_mode
-    }
-}
 
 /// Mock provider for testing
 pub struct MockProvider {
     config: LlmConfig,
-    app_config: Box<dyn ConfigProvider>,
+    app_config: Config,
     response: String,
     should_fail: bool,
 }
@@ -58,7 +18,13 @@ impl MockProvider {
                 model: "mock-model".to_string(),
                 endpoint: "https://mock.api.com/v1/chat/completions".to_string(),
             },
-            app_config: Box::new(MockConfig::default()),
+            app_config: Config {
+                api_key: Some("test_key".to_string()),
+                candidate_count: Some(1),
+                llm_provider: Some("mock".to_string()),
+                llm_model: Some("mock-model".to_string()),
+                committo_dev: Some(false),
+            },
             response: "Mock commit message".to_string(),
             should_fail: false,
         }
@@ -70,7 +36,13 @@ impl MockProvider {
                 model: "mock-model".to_string(),
                 endpoint: "https://mock.api.com/v1/chat/completions".to_string(),
             },
-            app_config: Box::new(MockConfig::default()),
+            app_config: Config {
+                api_key: Some("test_key".to_string()),
+                candidate_count: Some(1),
+                llm_provider: Some("mock".to_string()),
+                llm_model: Some("mock-model".to_string()),
+                committo_dev: Some(false),
+            },
             response: response.to_string(),
             should_fail: false,
         }
@@ -82,20 +54,26 @@ impl MockProvider {
                 model: "mock-model".to_string(),
                 endpoint: "https://mock.api.com/v1/chat/completions".to_string(),
             },
-            app_config: Box::new(MockConfig::default()),
+            app_config: Config {
+                api_key: Some("test_key".to_string()),
+                candidate_count: Some(1),
+                llm_provider: Some("mock".to_string()),
+                llm_model: Some("mock-model".to_string()),
+                committo_dev: Some(false),
+            },
             response: String::new(),
             should_fail: true,
         }
     }
     
     #[allow(dead_code)]
-    pub fn with_config(config: MockConfig) -> Self {
+    pub fn with_config(config: Config) -> Self {
         Self {
             config: LlmConfig {
                 model: "mock-model".to_string(),
                 endpoint: "https://mock.api.com/v1/chat/completions".to_string(),
             },
-            app_config: Box::new(config),
+            app_config: config,
             response: "Mock commit message".to_string(),
             should_fail: false,
         }
@@ -108,8 +86,8 @@ impl LlmProvider for MockProvider {
         &self.config
     }
     
-    fn get_provider_name(&self) -> &'static str {
-        "Mock"
+    fn get_provider_name(&self) -> String {
+        self.app_config.llm_provider.clone().unwrap_or_else(|| "Mock".to_string())
     }
 
     async fn generate_commit_message_impl(&self, system_prompt: &str, _diff: &str) -> Result<String, LlmError> {
@@ -137,16 +115,20 @@ impl LlmProvider for MockProvider {
     }
 
     fn get_api_key(&self) -> Result<String, LlmError> {
-        self.app_config.get_api_key()
+        self.app_config.api_key.clone()
             .filter(|key| !key.is_empty())
             .ok_or_else(|| LlmError::ConfigError("API key not found in config".to_string()))
     }
 
     fn get_candidate_count(&self) -> u32 {
-        self.app_config.get_candidate_count().unwrap_or(1)
+        self.app_config.candidate_count.unwrap_or(1)
     }
 
     fn get_dev_mode(&self) -> bool {
-        self.app_config.get_dev_mode().unwrap_or(false)
+        self.app_config.committo_dev.unwrap_or(false)
+    }
+    
+    fn get_app_config(&self) -> &Config {
+        &self.app_config
     }
 }

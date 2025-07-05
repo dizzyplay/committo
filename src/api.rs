@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use spinners::{Spinner, Spinners};
 use crate::convention::find_and_build_prompt;
+use crate::config::Config;
 
 /// Error type for LLM API operations
 #[derive(Debug)]
@@ -42,7 +43,7 @@ pub trait LlmProvider: Send + Sync {
     fn get_config(&self) -> &LlmConfig;
     
     /// Get provider name for display
-    fn get_provider_name(&self) -> &'static str;
+    fn get_provider_name(&self) -> String;
     
     /// Generate commit message using this provider (implementation-specific)
     async fn generate_commit_message_impl(&self, system_prompt: &str, diff: &str) -> Result<String, LlmError>;
@@ -50,30 +51,14 @@ pub trait LlmProvider: Send + Sync {
     /// Get API key from internal config
     fn get_api_key(&self) -> Result<String, LlmError>;
     
-    /// Get API key source description
-    fn get_api_key_source(&self) -> String {
-        format!("{} file", crate::config::CONFIG_FILE_NAME)
-    }
-    
-    /// Mask API key for display (first 5 chars + asterisks)
-    fn mask_api_key(&self, api_key: &str) -> String {
-        if api_key.len() >= 5 {
-            format!("{}{}", &api_key[..5], "*".repeat(api_key.len() - 5))
-        } else {
-            "*".repeat(api_key.len())
-        }
-    }
+    /// Get app config reference
+    fn get_app_config(&self) -> &Config;
     
     /// Print dry run information
     fn print_dry_run_info(&self, system_prompt: &str, diff: &str) {
         println!("--- Dry Run ---");
-        println!("Provider: {}", self.get_provider_name());
-        println!("API Key Source: {}", self.get_api_key_source());
-        
-        if let Ok(api_key) = self.get_api_key() {
-            println!("API Key: {}", self.mask_api_key(&api_key));
-        }
-        
+        print!("{}", self.get_app_config().show_masking_config());
+
         println!("\n--- Prompt ---");
         println!("{system_prompt}");
         println!("\n--- Git Diff ---");

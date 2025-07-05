@@ -1,15 +1,15 @@
 use async_trait::async_trait;
 use crate::api::{LlmConfig, LlmError, LlmProvider};
-use crate::config::{DEFAULT_OPENAI_MODEL, ConfigProvider};
+use crate::config::{DEFAULT_OPENAI_MODEL, Config};
 
 /// OpenAI provider implementation
 pub struct OpenAiProvider {
     config: LlmConfig,
-    app_config: Box<dyn ConfigProvider>,
+    app_config: Config,
 }
 
 impl OpenAiProvider {
-    pub fn new(app_config: Box<dyn ConfigProvider>) -> Self {
+    pub fn new(app_config: Config) -> Self {
         Self {
             config: LlmConfig {
                 model: DEFAULT_OPENAI_MODEL.to_string(),
@@ -19,7 +19,7 @@ impl OpenAiProvider {
         }
     }
     
-    pub fn with_model(app_config: Box<dyn ConfigProvider>, model: &str) -> Self {
+    pub fn with_model(app_config: Config, model: &str) -> Self {
         Self {
             config: LlmConfig {
                 model: model.to_string(),
@@ -36,8 +36,8 @@ impl LlmProvider for OpenAiProvider {
         &self.config
     }
     
-    fn get_provider_name(&self) -> &'static str {
-        "OpenAI"
+    fn get_provider_name(&self) -> String {
+        self.app_config.llm_provider.clone().unwrap_or_else(|| "OpenAI".to_string())
     }
 
     async fn generate_commit_message_impl(&self, system_prompt: &str, diff: &str) -> Result<String, LlmError> {
@@ -81,16 +81,20 @@ impl LlmProvider for OpenAiProvider {
     }
 
     fn get_api_key(&self) -> Result<String, LlmError> {
-        self.app_config.get_api_key()
+        self.app_config.api_key.clone()
             .filter(|key| !key.is_empty())
             .ok_or_else(|| LlmError::ConfigError("API key not found in config".to_string()))
     }
 
     fn get_candidate_count(&self) -> u32 {
-        self.app_config.get_candidate_count().unwrap_or(1)
+        self.app_config.candidate_count.unwrap_or(1)
     }
 
     fn get_dev_mode(&self) -> bool {
-        self.app_config.get_dev_mode().unwrap_or(false)
+        self.app_config.committo_dev.unwrap_or(false)
+    }
+    
+    fn get_app_config(&self) -> &Config {
+        &self.app_config
     }
 }

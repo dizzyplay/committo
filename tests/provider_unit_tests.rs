@@ -13,7 +13,7 @@ mod provider_tests {
     #[test]
     fn test_openai_provider_config() {
         let app_config = Config::default();
-        let provider = OpenAiProvider::new(Box::new(app_config));
+        let provider = OpenAiProvider::new(app_config);
         let config = provider.get_config();
         
         assert_eq!(config.model, DEFAULT_OPENAI_MODEL);
@@ -24,7 +24,7 @@ mod provider_tests {
     #[test]
     fn test_openai_provider_with_custom_model() {
         let app_config = Config::default();
-        let provider = OpenAiProvider::with_model(Box::new(app_config), "gpt-4");
+        let provider = OpenAiProvider::with_model(app_config, "gpt-4");
         let config = provider.get_config();
         
         assert_eq!(config.model, GPT4_MODEL);
@@ -37,28 +37,44 @@ mod provider_tests {
         let config = provider.get_config();
         
         assert_eq!(config.model, "mock-model");
-        assert_eq!(provider.get_provider_name(), "Mock");
+        assert_eq!(provider.get_provider_name(), "mock");
         assert_eq!(provider.get_candidate_count(), 1);
         assert_eq!(provider.get_dev_mode(), false);
     }
 
     #[test]
     fn test_api_key_masking() {
-        let provider = MockProvider::new();
+        let config = Config {
+            api_key: Some("test_key".to_string()),
+            candidate_count: Some(1),
+            llm_provider: Some("mock".to_string()),
+            llm_model: Some("mock-model".to_string()),
+            committo_dev: Some(false),
+        };
         
         // Test various key lengths
-        assert_eq!(provider.mask_api_key("sk-1234567890"), "sk-12********");
-        assert_eq!(provider.mask_api_key("abcd"), "****");
-        assert_eq!(provider.mask_api_key("12345"), "12345");
-        assert_eq!(provider.mask_api_key("123456789012345"), "12345**********");
+        assert_eq!(config.mask_api_key("sk-1234567890"), "sk-12********");
+        assert_eq!(config.mask_api_key("abcd"), "****");
+        assert_eq!(config.mask_api_key("12345"), "12345");
+        assert_eq!(config.mask_api_key("123456789012345"), "12345**********");
     }
 
     #[test]
-    fn test_api_key_source_detection() {
-        let provider = MockProvider::new();
+    fn test_config_dry_run_output() {
+        let config = Config {
+            api_key: Some("test_key".to_string()),
+            candidate_count: Some(5),
+            llm_provider: Some("openai".to_string()),
+            llm_model: Some("gpt-4".to_string()),
+            committo_dev: Some(false),
+        };
         
-        // With TOML system, source is always config file
-        assert_eq!(provider.get_api_key_source(), "committo.toml file");
+        let output = config.show_masking_config();
+        assert!(output.contains("--- Configuration ---"));
+        assert!(output.contains("Candidate Count : 5"));
+        assert!(output.contains("LLM Provider : \"openai\""));
+        assert!(output.contains("LLM Model : \"gpt-4\""));
+        assert!(output.contains("(masked)"));
     }
 
     #[tokio::test]

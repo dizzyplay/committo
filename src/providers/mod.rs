@@ -9,7 +9,7 @@ pub mod openai;
 pub use openai::OpenAiProvider;
 
 use crate::api::LlmProvider;
-use crate::config::{DEFAULT_OPENAI_MODEL, PROVIDER_OPENAI, Config, ConfigProvider};
+use crate::config::{DEFAULT_OPENAI_MODEL, PROVIDER_OPENAI, Config};
 
 /// Provider factory for creating LLM providers
 pub struct ProviderFactory;
@@ -17,26 +17,26 @@ pub struct ProviderFactory;
 impl ProviderFactory {
     /// Create provider based on provided config
     pub fn create_provider(config: Config) -> Box<dyn LlmProvider + Send + Sync> {
-        let provider_name = config.get_llm_provider().unwrap_or_else(|| PROVIDER_OPENAI.to_string());
-        let model = config.get_llm_model().unwrap_or_else(|| DEFAULT_OPENAI_MODEL.to_string());
+        let provider_name = config.llm_provider.clone().unwrap_or_else(|| PROVIDER_OPENAI.to_string());
+        let model = config.llm_model.clone().unwrap_or_else(|| DEFAULT_OPENAI_MODEL.to_string());
         
         match provider_name.as_str() {
-            PROVIDER_OPENAI => Box::new(OpenAiProvider::with_model(Box::new(config), &model)),
+            PROVIDER_OPENAI => Box::new(OpenAiProvider::with_model(config, &model)),
             // Future providers can be added here:
             // "claude" => Box::new(claude::ClaudeProvider::new()),
             // "local" => Box::new(local::LocalLlmProvider::new()),
-            _ => Box::new(OpenAiProvider::new(Box::new(config))), // Default
+            _ => Box::new(OpenAiProvider::new(config)), // Default
         }
     }
     
     /// Create specific OpenAI provider with config
     pub fn create_openai(config: Config) -> Box<dyn LlmProvider + Send + Sync> {
-        Box::new(OpenAiProvider::new(Box::new(config)))
+        Box::new(OpenAiProvider::new(config))
     }
     
     /// Create OpenAI provider with specific model and config
     pub fn create_openai_with_model(config: Config, model: &str) -> Box<dyn LlmProvider + Send + Sync> {
-        Box::new(OpenAiProvider::with_model(Box::new(config), model))
+        Box::new(OpenAiProvider::with_model(config, model))
     }
 }
 
