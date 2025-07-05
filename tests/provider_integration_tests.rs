@@ -1,7 +1,8 @@
 use committo::api::generate_commit_message_with_provider;
-use self::providers::{MockProvider, MockConfig};
 
-mod providers;
+#[path = "common/mock.rs"]
+mod mock;
+use mock::{MockProvider, MockConfig};
 
 #[tokio::test]
 async fn test_mock_provider_integration() -> Result<(), Box<dyn std::error::Error>> {

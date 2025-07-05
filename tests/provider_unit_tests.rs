@@ -1,9 +1,10 @@
 use committo::providers::{OpenAiProvider, ProviderFactory};
 use committo::api::{LlmProvider, generate_commit_message_with_provider};
 use committo::config::{DEFAULT_OPENAI_MODEL, GPT4_MODEL, Config};
-use self::providers::{MockProvider};
 
-mod providers;
+#[path = "common/mock.rs"]
+mod mock;
+use mock::MockProvider;
 
 #[cfg(test)]
 mod provider_tests {
@@ -37,6 +38,8 @@ mod provider_tests {
         
         assert_eq!(config.model, "mock-model");
         assert_eq!(provider.get_provider_name(), "Mock");
+        assert_eq!(provider.get_candidate_count(), 1);
+        assert_eq!(provider.get_dev_mode(), false);
     }
 
     #[test]
