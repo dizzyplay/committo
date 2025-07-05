@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-
+use spinners::{Spinner, Spinners};
 use crate::convention::find_and_build_prompt;
 
 /// Error type for LLM API operations
@@ -114,7 +114,10 @@ pub trait LlmProvider: Send + Sync {
             return Ok("Dry run complete.".to_string());
         }
 
-        self.generate_commit_message_impl(&system_prompt, diff).await
+        let mut sp = Spinner::new(Spinners::BouncingBall, "Your next legendary commit, coming right up..!".into());
+        let response= self.generate_commit_message_impl(&system_prompt, diff).await;
+        sp.stop_and_persist("✔", "How about these? ".into());
+        return response
     }
 }
 
