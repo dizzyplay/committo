@@ -60,6 +60,7 @@ impl LlmProvider for OpenAiProvider {
         
         let request_body = serde_json::json!({
             "model": self.config.model,
+            "temperature": 0.2,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": diff}
