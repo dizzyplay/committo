@@ -9,6 +9,24 @@ pub const CONFIG_FILE_NAME: &str = "committo.toml";
 /// Convention file name  
 pub const CONVENTION_FILE_NAME: &str = ".committoconvention";
 
+/// Trait for providing configuration to LLM providers
+pub trait ConfigProvider: Send + Sync {
+    /// Get API key
+    fn get_api_key(&self) -> Option<String>;
+    
+    /// Get LLM provider name
+    fn get_llm_provider(&self) -> Option<String>;
+    
+    /// Get LLM model
+    fn get_llm_model(&self) -> Option<String>;
+    
+    /// Get candidate count
+    fn get_candidate_count(&self) -> Option<u32>;
+    
+    /// Get dev mode (dry run)
+    fn get_dev_mode(&self) -> Option<bool>;
+}
+
 /// Configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
@@ -26,6 +44,28 @@ pub struct Config {
     
     #[serde(rename = "committo-dev")]
     pub committo_dev: Option<bool>,
+}
+
+impl ConfigProvider for Config {
+    fn get_api_key(&self) -> Option<String> {
+        self.api_key.clone()
+    }
+    
+    fn get_llm_provider(&self) -> Option<String> {
+        self.llm_provider.clone()
+    }
+    
+    fn get_llm_model(&self) -> Option<String> {
+        self.llm_model.clone()
+    }
+    
+    fn get_candidate_count(&self) -> Option<u32> {
+        self.candidate_count
+    }
+    
+    fn get_dev_mode(&self) -> Option<bool> {
+        self.committo_dev
+    }
 }
 
 /// Config keys for TOML file

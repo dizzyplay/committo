@@ -29,18 +29,10 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             config::show_config(&config_path)?;
         }
         Commands::Generate { dry_run } => {
-            let home_path = home::home_dir().ok_or_else(|| {
-                io::Error::new(io::ErrorKind::NotFound, "Cannot find home directory")
-            })?;
-            let config_path = home_path.join(config::CONFIG_FILE_NAME);
+            let provider = providers::ProviderFactory::create_provider();
             
-            // Check config file for dev mode
-            let force_dry_run = config::get_config_value(&config_path, config::COMMITTO_DEV_CONFIG)
-                .ok()
-                .and_then(|v| v.and_then(|s| s.parse().ok()))
-                .unwrap_or(false);
-            
-            let effective_dry_run = dry_run || force_dry_run;
+            // Get effective dry run mode (CLI flag or config dev mode)
+            let effective_dry_run = dry_run || provider.get_dev_mode();
 
             let diff = git::get_staged_diff()?;
             if !effective_dry_run && diff.trim().is_empty() {
@@ -48,18 +40,12 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                 return Ok(());
             }
 
-            // Get candidate count from config file only
-            let candidate_count = config::get_config_value(&config_path, config::CANDIDATE_COUNT_CONFIG)
-                .ok()
-                .and_then(|v| v.and_then(|s| s.parse().ok()))
-                .unwrap_or(1);
-
-            let provider = providers::ProviderFactory::create_provider();
-            let response = provider.generate_commit_message(&diff, effective_dry_run, candidate_count)
+            let response = provider.generate_commit_message(&diff, effective_dry_run)
                 .await
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
             
             if effective_dry_run {
+                let candidate_count = provider.get_candidate_count();
                 if candidate_count > 1 {
                     println!("Dry run: Would generate {} candidates", candidate_count);
                 } else {
@@ -69,6 +55,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             }
             
             // Parse the response into candidates
+            let candidate_count = provider.get_candidate_count();
             let candidates = utils::parse_commit_message_candidates(&response, candidate_count);
             
             if candidates.is_empty() {

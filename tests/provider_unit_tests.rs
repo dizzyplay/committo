@@ -1,7 +1,7 @@
 use committo::providers::{OpenAiProvider, ProviderFactory};
 use committo::api::{LlmProvider, generate_commit_message_with_provider};
-use committo::config::{DEFAULT_OPENAI_MODEL, GPT4_MODEL};
-use self::providers::MockProvider;
+use committo::config::{DEFAULT_OPENAI_MODEL, GPT4_MODEL, Config};
+use self::providers::{MockProvider};
 
 mod providers;
 
@@ -11,7 +11,8 @@ mod provider_tests {
 
     #[test]
     fn test_openai_provider_config() {
-        let provider = OpenAiProvider::new();
+        let app_config = Config::default();
+        let provider = OpenAiProvider::new(Box::new(app_config));
         let config = provider.get_config();
         
         assert_eq!(config.model, DEFAULT_OPENAI_MODEL);
@@ -21,7 +22,8 @@ mod provider_tests {
 
     #[test]
     fn test_openai_provider_with_custom_model() {
-        let provider = OpenAiProvider::with_model("gpt-4");
+        let app_config = Config::default();
+        let provider = OpenAiProvider::with_model(Box::new(app_config), "gpt-4");
         let config = provider.get_config();
         
         assert_eq!(config.model, GPT4_MODEL);
@@ -78,7 +80,7 @@ mod provider_tests {
     async fn test_dry_run_mode() {
         let provider = MockProvider::with_response("test response");
         
-        let result = provider.generate_commit_message("diff content", true, 1).await;
+        let result = provider.generate_commit_message("diff content", true).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Dry run complete.");
     }
@@ -90,8 +92,7 @@ mod provider_tests {
         let result = generate_commit_message_with_provider(
             &provider,
             "diff content",
-            false,
-            1
+            false
         ).await;
         
         assert!(result.is_ok());

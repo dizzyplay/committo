@@ -1,3 +1,3 @@
 pub mod mock;
 
-pub use mock::MockProvider;
+pub use mock::{MockProvider, MockConfig};

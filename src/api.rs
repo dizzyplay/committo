@@ -47,18 +47,8 @@ pub trait LlmProvider: Send + Sync {
     /// Generate commit message using this provider (implementation-specific)
     async fn generate_commit_message_impl(&self, system_prompt: &str, diff: &str) -> Result<String, LlmError>;
     
-    /// Get API key from config file only
-    fn get_api_key(&self) -> Result<String, LlmError> {
-        let home_dir = dirs::home_dir().ok_or_else(|| {
-            LlmError::ConfigError("Could not determine home directory".to_string())
-        })?;
-        let config_path = home_dir.join(crate::config::CONFIG_FILE_NAME);
-        
-        match crate::config::get_config_value(&config_path, crate::config::API_KEY_CONFIG) {
-            Ok(Some(api_key)) if !api_key.is_empty() => Ok(api_key),
-            _ => Err(LlmError::ConfigError(format!("API key not found in config file: {}", config_path.display())))
-        }
-    }
+    /// Get API key from internal config
+    fn get_api_key(&self) -> Result<String, LlmError>;
     
     /// Get API key source description
     fn get_api_key_source(&self) -> String {
@@ -91,17 +81,27 @@ pub trait LlmProvider: Send + Sync {
         println!("--- End Dry Run ---");
     }
     
+    /// Get candidate count from internal config
+    fn get_candidate_count(&self) -> u32;
+    
+    /// Get dev mode from internal config
+    fn get_dev_mode(&self) -> bool;
+
     /// Main generate commit message method (with dry run support)
-    async fn generate_commit_message(&self, diff: &str, dry_run: bool, candidate_count: u32) -> Result<String, LlmError> {
+    async fn generate_commit_message(&self, diff: &str, dry_run: bool) -> Result<String, LlmError> {
         // Always check API key first, even for dry run
         self.get_api_key()?;
         
+        // Get candidate count from config
+        let candidate_count = self.get_candidate_count();
+        
         let guideline = "**IMPORTANT PRIORITY RULES:**\n- Numbers indicate priority: 1 = HIGHEST priority, 2, 3, 4, 5... = lower priority\n- When instructions conflict, ALWAYS follow the higher priority (lower number)\n- Apply these rules when analyzing git diff and generating commit messages\n";
         let custom_conventions = find_and_build_prompt().unwrap_or_default();
+        let default_system_prompt = "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string();
         let mut system_prompt = if custom_conventions.is_empty() {
-            "You are an expert at writing git commit messages. Based on the following diff, generate a concise and informative commit message.".to_string()
+            default_system_prompt
         } else {
-            format!("{}\n{}", guideline, custom_conventions)
+            format!("{}\n\n{}\n{}",default_system_prompt, guideline, custom_conventions)
         };
 
         // Modify prompt for multiple candidates
@@ -123,13 +123,12 @@ pub async fn generate_commit_message_with_provider(
     provider: &dyn LlmProvider,
     diff: &str,
     dry_run: bool,
-    candidate_count: u32,
 ) -> Result<String, LlmError> {
-    provider.generate_commit_message(diff, dry_run, candidate_count).await
+    provider.generate_commit_message(diff, dry_run).await
 }
 
 /// Generate commit message using default provider (for backward compatibility)
 pub async fn generate_commit_message(diff: &str, dry_run: bool) -> Result<String, LlmError> {
     let provider = crate::providers::ProviderFactory::create_provider();
-    generate_commit_message_with_provider(provider.as_ref(), diff, dry_run, 1).await
+    generate_commit_message_with_provider(provider.as_ref(), diff, dry_run).await
 }
