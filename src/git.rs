@@ -6,6 +6,7 @@ pub fn get_staged_diff() -> io::Result<String> {
     let output = Command::new("git")
         .arg("diff")
         .arg("--staged")
+        .arg("--unified=1")
         .output()?;
 
     if !output.status.success() {

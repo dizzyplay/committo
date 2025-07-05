@@ -32,7 +32,7 @@ echo "For partial modifications use UPDATE prefix, for new features use ADD pref
 cd project
 
 # Create test config file in project directory (will be used as HOME)
-#echo -e "api-key = \"1234abcaasdfd\"\ncandidate-count = 5" > committo.toml
+echo -e "api-key = \"1234abcaasdfd\"\ncandidate-count = 5" > committo.toml
 
 git init -q
 git config user.name  "Test User"
