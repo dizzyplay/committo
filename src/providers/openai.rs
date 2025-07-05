@@ -40,24 +40,10 @@ impl LlmProvider for OpenAiProvider {
         "OpenAI"
     }
 
-    fn get_api_key(&self) -> Result<String, LlmError> {
-        self.app_config.get_api_key()
-            .filter(|key| !key.is_empty())
-            .ok_or_else(|| LlmError::ConfigError("API key not found in config".to_string()))
-    }
-    
-    fn get_candidate_count(&self) -> u32 {
-        self.app_config.get_candidate_count().unwrap_or(1)
-    }
-    
-    fn get_dev_mode(&self) -> bool {
-        self.app_config.get_dev_mode().unwrap_or(false)
-    }
-
     async fn generate_commit_message_impl(&self, system_prompt: &str, diff: &str) -> Result<String, LlmError> {
         let api_key = self.get_api_key()?;
         let client = reqwest::Client::new();
-        
+
         let request_body = serde_json::json!({
             "model": self.config.model,
             "temperature": 0.2,
@@ -82,7 +68,7 @@ impl LlmProvider for OpenAiProvider {
         }
 
         let response_data: serde_json::Value = response.json().await?;
-        
+
         let content = response_data
             .get("choices")
             .and_then(|choices| choices.get(0))
@@ -92,5 +78,19 @@ impl LlmProvider for OpenAiProvider {
             .ok_or_else(|| LlmError::ApiError("Invalid response format from OpenAI API".to_string()))?;
 
         Ok(content.to_string())
+    }
+
+    fn get_api_key(&self) -> Result<String, LlmError> {
+        self.app_config.get_api_key()
+            .filter(|key| !key.is_empty())
+            .ok_or_else(|| LlmError::ConfigError("API key not found in config".to_string()))
+    }
+
+    fn get_candidate_count(&self) -> u32 {
+        self.app_config.get_candidate_count().unwrap_or(1)
+    }
+
+    fn get_dev_mode(&self) -> bool {
+        self.app_config.get_dev_mode().unwrap_or(false)
     }
 }
