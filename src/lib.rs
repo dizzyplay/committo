@@ -67,7 +67,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                 if candidates.len() == 1 {
                     // Single candidate - ask if user wants to retry or use it
                     use dialoguer::Select;
-                    let options = vec!["🔄 Retry (generate new message)", &candidates[0]];
+                    let options = vec!["🔄 Retry (generate new commit message)", &candidates[0]];
                     let selection = Select::new()
                         .with_prompt("Select an option")
                         .items(&options)

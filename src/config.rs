@@ -142,7 +142,7 @@ pub fn show_config(config_path: &Path) -> io::Result<()> {
     if config_path.exists() {
         let config = load_config(config_path)?;
         println!("--- {} content ---", CONFIG_FILE_NAME);
-        
+
         if let Some(api_key) = &config.api_key {
             println!("api-key = \"{}\"", api_key);
         }
@@ -199,7 +199,7 @@ fn interactive_setup(config_path: &Path) -> io::Result<Config> {
     
     // Model selection
     let models = match providers[provider_selection] {
-        "openai" => vec!["gpt-3.5-turbo", "gpt-4"],
+        "openai" => vec!["gpt-3.5-turbo", "gpt-4", "gpt-4.1-mini-2025-04-14"],
         _ => vec!["gpt-3.5-turbo"],
     };
     
