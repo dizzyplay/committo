@@ -213,7 +213,7 @@ fn interactive_setup(config_path: &Path) -> io::Result<Config> {
     // Candidate count
     let candidate_count: u32 = Input::new()
         .with_prompt("Number of commit message candidates")
-        .default(1)
+        .default(5)
         .interact_text()
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     
