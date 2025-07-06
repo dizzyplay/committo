@@ -1,2 +1,11 @@
 [release]
 publish = false
+
+[package]
+name        = "committo"
+version     = "0.0.7"
+edition     = "2021"
+
+description = "AI-powered commit message generator"
+license     = "MIT"
+repository  = "https://github.com/dizzyplay/committo"
