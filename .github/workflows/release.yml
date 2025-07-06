@@ -1,116 +1,67 @@
-name: Release
+name: Release (macOS-arm64)
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: [ "v*" ]          # 예: v0.0.2
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write           # 릴리즈 자산 업로드
+  pull-requests: write      # Tap PR(또는 직접 push) 용
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact_name: committo-linux
-            exe: ""
-          - os: macos-14
-            targets: "x86_64-apple-darwin aarch64-apple-darwin"
-            artifact_name: committo-macos
-            exe: ""
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact_name: committo-windows
-            exe: ".exe"
+  build-release:
+    runs-on: macos-14       # Apple Silicon 러너
+    env:
+      TAP_REPO: dizzyplay/homebrew-committo
+      FORMULA: committo.rb
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.targets || matrix.target }}
+          targets: aarch64-apple-darwin
 
-      - name: Build binary (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: cargo build --release --target ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release --target aarch64-apple-darwin
 
-      - name: Build binary (macOS)
-        if: matrix.os == 'macos-14'
+      - name: Package & compute SHA-256
         run: |
-          cargo build --release --target x86_64-apple-darwin
-          cargo build --release --target aarch64-apple-darwin
+          TAG=${GITHUB_REF#refs/tags/}              # v0.0.2
+          mkdir dist
+          cp target/aarch64-apple-darwin/release/committo dist/
+          cd dist
+          TARBALL="committo-${TAG}-macos.tar.gz"
+          tar -czf "${TARBALL}" committo
+          SHA=$(shasum -a 256 "${TARBALL}" | awk '{print $1}')
+          echo "ASSET=${TARBALL}" >> $GITHUB_ENV
+          echo "SHA256=${SHA}"   >> $GITHUB_ENV
 
-      - name: Build binary (Windows)
-        if: matrix.os == 'windows-latest'
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Upload artifact (Linux/Windows)
-        if: matrix.os != 'macos-14'
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release + upload asset
+        uses: softprops/action-gh-release@v1
         with:
-          name: ${{ matrix.artifact_name }}
-          path: target/${{ matrix.target }}/release/committo${{ matrix.exe }}
-
-      - name: Upload artifact (macOS Intel)
-        if: matrix.os == 'macos-14'
-        uses: actions/upload-artifact@v4
-        with:
-          name: committo-macos
-          path: target/x86_64-apple-darwin/release/committo
-
-      - name: Upload artifact (macOS ARM64)
-        if: matrix.os == 'macos-14'
-        uses: actions/upload-artifact@v4
-        with:
-          name: committo-macos-arm64
-          path: target/aarch64-apple-darwin/release/committo
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Debug artifacts structure
-        run: |
-          echo "=== Artifacts structure ==="
-          find artifacts -type f
-          
-      - name: Prepare binaries for GoReleaser
-        run: |
-          mkdir -p dist
-          # Linux
-          cp artifacts/committo-linux/committo dist/committo-linux
-          # macOS Intel  
-          cp artifacts/committo-macos/committo dist/committo-macos
-          # macOS Apple Silicon
-          cp artifacts/committo-macos-arm64/committo dist/committo-macos-arm64
-          # Windows
-          cp artifacts/committo-windows/committo.exe dist/committo-windows.exe
-          
-          # Make Unix binaries executable (exclude Windows .exe files)
-          find dist -type f ! -name "*.exe" -exec chmod +x {} \;
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
+          files: dist/${{ env.ASSET }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_PAT: ${{ secrets.GH_PAT }}
+
+      - name: Update Homebrew Tap formula (direct push)
+        env:
+          GH_PAT:   ${{ secrets.GH_PAT }}           # PAT( repo:contents, repo:pull_request )
+          SHA256:   ${{ env.SHA256 }}
+          TAG:      ${{ github.ref_name }}          # v0.0.2
+        run: |
+          git config --global user.name  "CI Bot"
+          git config --global user.email "ci@users.noreply.github.com"
+
+          git clone "https://${GH_PAT}@github.com/${TAP_REPO}.git" tap
+          cd tap
+
+          # URL·SHA256 치환
+          sed -i '' -E "s|url \".*\"|url \"https://github.com/dizzyplay/committo/releases/download/${TAG}/committo-${TAG}-macos.tar.gz\"|" "${FORMULA}"
+          sed -i '' -E "s|sha256 \".*\"|sha256 \"${SHA256}\"|" "${FORMULA}"
+
+          git add "${FORMULA}"
+          git commit -m "committo ${TAG} formula update"
+          git push origin HEAD:main
