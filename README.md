@@ -31,7 +31,7 @@ committo show
 ### 커밋 메시지 생성
 ```bash
 git add .
-committo generate     # 실제 API 호출
+committo or committo generate   # 실제 API 호출
 committo generate --dry-run          # 드라이런 (프롬프트 확인용. API 호출 안함)
 ```
 
