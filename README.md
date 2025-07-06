@@ -83,7 +83,7 @@ No configuration file found at: /Users/user/committo.toml
 
 ```bash
 $ git add src/lib.rs
-$ committo generate
+$ committo
 🔄 Retry (generate new messages)
 feat: 환경변수 파싱에 정규표현식 검증 추가
 refactor: 설정 파일 로딩 로직 중앙화
