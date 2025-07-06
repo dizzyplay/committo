@@ -2,12 +2,14 @@
 
 커밋 메시지 생성기 
 
-## install
+## install(Build)
 
 ```bash
 build
 cargo build --release
 ```
+
+## install(Homebrew)
 ```bash
 brew tap dizzyplay/committo
 brew install committo
