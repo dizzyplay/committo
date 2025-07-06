@@ -19,22 +19,23 @@ pub async fn run(cli: Cli) -> io::Result<()> {
     })?;
     let config_path = home_path.join(config::CONFIG_FILE_NAME);
     match cli.command {
-        Commands::Set { key, value } => {
+        Some(Commands::Set { key, value }) => {
             // Set command doesn't need interactive setup - just use static method
             config::Config::handle_set_command(&key, &value, &config_path)?;
         }
-        Commands::Show => {
+        Some(Commands::Show) => {
             // Create config instance - this will handle setup if needed
             let (config, _) = config::Config::new(&config_path)?;
             config.show()?;
         }
-        Commands::Generate { dry_run } => {
+        Some(Commands::Generate) | None => {
+            // Default to generate when no subcommand is provided
             // Create config instance - this will handle setup if needed
             let (config, _) = config::Config::new(&config_path)?;
             let provider = providers::ProviderFactory::create_provider(config);
             
-            // Get effective dry run mode (CLI flag or config dev mode)
-            let effective_dry_run = dry_run;
+            // Get effective dry run mode from global CLI flag
+            let effective_dry_run = cli.dry_run;
 
             let diff = git::get_staged_diff()?;
             if !effective_dry_run && diff.trim().is_empty() {

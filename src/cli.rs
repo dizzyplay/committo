@@ -10,7 +10,11 @@ const VERSION: &str = match option_env!("BUILD_VERSION") {
 #[command(version = VERSION, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
+    
+    /// Run in dry-run mode to see the generated prompt without calling the API
+    #[arg(long, global = true)]
+    pub dry_run: bool,
 }
 
 #[derive(Subcommand, Debug, PartialEq)]
@@ -25,9 +29,5 @@ pub enum Commands {
     /// Show current config
     Show,
     /// Generate a commit message
-    Generate {
-        /// Run in dry-run mode to see the generated prompt without calling the API
-        #[arg(long)]
-        dry_run: bool,
-    },
+    Generate,
 }
