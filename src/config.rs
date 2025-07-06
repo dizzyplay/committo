@@ -5,7 +5,7 @@ use std::io;
 use std::path::Path;
 
 /// Configuration file name
-pub const CONFIG_FILE_NAME: &str = "committo.toml";
+pub const CONFIG_FILE_NAME: &str = ".committo.toml";
 
 /// Convention file name  
 pub const CONVENTION_FILE_NAME: &str = ".committoconvention";
