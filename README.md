@@ -2,12 +2,19 @@
 
 커밋 메시지 생성기 
 
-## 빌드
+## install
 
 ```bash
+build
 cargo build --release
 ```
+```bash
+brew tap dizzyplay/committo
+brew install committo
 
+brew update
+brew upgrade committo
+```
 ## 사용법
 
 ### 설정
@@ -25,7 +32,7 @@ committo show
 ```bash
 git add .
 committo generate     # 실제 API 호출
-committo dev          # 드라이런 (API 호출 안함)
+committo generate --dry-run          # 드라이런 (프롬프트 확인용. API 호출 안함)
 ```
 
 ## 컨벤션 파일
@@ -47,26 +54,19 @@ echo "frontend: UI 컴포넌트 변경시 component: 접두사 사용" > /projec
 
 ## 개발
 
-```bash
-# 개발 중 테스트 (현재 폴더)
-cargo run -- dev
-
-# 실제 생성 (현재 폴더)  
-cargo run -- generate
-
 # 스모크 테스트 (/tmp 격리 환경)
 ./scripts/smoke_test.sh
 ```
 
 ## 설정 파일
 
-`~/committo.toml`:
+`~/.committo.toml`:
 ```toml
 api-key = "your-key-here"
 candidate-count = 5
 llm-provider = "openai"
 llm-model = "gpt-3.5-turbo"
-committo-dev = false
+run-edit = false
 ```
 
 ## 초기 설정
@@ -74,18 +74,9 @@ committo-dev = false
 처음 사용시 설정 파일이 없으면 자동으로 대화형 설정 진행:
 
 ```bash
-$ committo generate
+$ committo
 No configuration file found at: /Users/user/committo.toml
-Let's set up your configuration interactively!
-
-=== Committo Configuration Setup ===
-Enter your OpenAI API key: sk-...
-Select LLM provider: [openai]
-Select model: [gpt-3.5-turbo, gpt-4]
-Number of commit message candidates (5): 
-Enable development mode (dry-run by default)? [y/N]: 
-
-✅ Configuration saved to: /Users/user/committo.toml
+...
 ```
 
 ## 예시
