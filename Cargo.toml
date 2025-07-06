@@ -1,7 +1,10 @@
 [package]
 name = "committo"
-version = "0.1.0"
+version = "0.0.7"
 edition = "2024"
+description = "AI-powered commit message generator"
+license     = "MIT"
+repository  = "https://github.com/dizzyplay/committo"
 
 
 [dependencies]
