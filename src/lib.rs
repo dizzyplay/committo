@@ -68,16 +68,15 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                 
                 if candidates.len() == 1 {
                     // Single candidate - ask if user wants to retry or use it
-                    use dialoguer::Select;
+                    use inquire::Select;
                     let options = vec!["🔄 Retry (generate new commit message)", &candidates[0]];
-                    let selection = Select::new()
-                        .with_prompt("Select an option")
-                        .items(&options)
-                        .default(1) // Default to the generated message
-                        .interact()
+                    let selection = Select::new("Select an option:", options.clone())
+                        .with_starting_cursor(1) // Default to the generated message
+                        .prompt()
                         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                    let selection_index = options.iter().position(|&x| x == selection).unwrap();
                     
-                    if selection == 0 {
+                    if selection_index == 0 {
                         // Retry - generate new message
                         println!("🔄 Generating new commit message...");
                         let new_response = provider.generate_commit_message(&diff, false)
@@ -90,18 +89,17 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                     }
                 } else {
                     // Multiple candidates - add retry option at the top
-                    use dialoguer::Select;
+                    use inquire::Select;
                     let mut options = vec!["🔄 Retry (generate new messages)".to_string()];
                     options.extend(candidates.iter().cloned());
                     
-                    let selection = Select::new()
-                        .with_prompt("Select a commit message")
-                        .items(&options)
-                        .default(1) // Default to first generated message
-                        .interact()
+                    let selection = Select::new("Select a commit message:", options.clone())
+                        .with_starting_cursor(1) // Default to first generated message
+                        .prompt()
                         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                    let selection_index = options.iter().position(|x| x == &selection).unwrap();
                     
-                    if selection == 0 {
+                    if selection_index == 0 {
                         // Retry - generate new messages
                         println!("🔄 Generating new commit messages...");
                         let new_response = provider.generate_commit_message(&diff, false)
@@ -110,7 +108,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                         response = new_response;
                         continue;
                     } else {
-                        break candidates[selection - 1].clone();
+                        break candidates[selection_index - 1].clone();
                     }
                 }
             };

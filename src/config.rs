@@ -2,6 +2,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
+use inquire::{Text, Select, Confirm};
 
 /// Configuration file name
 pub const CONFIG_FILE_NAME: &str = "committo.toml";
@@ -157,64 +158,52 @@ impl Config {
 
     /// Interactive configuration setup
     fn interactive_setup(config_path: &Path) -> io::Result<Config> {
-        use dialoguer::{Input, Select, Confirm};
-        
+
         println!("\n=== Committo Configuration Setup ===");
         
         // API Key setup
-        let api_key: String = Input::new()
-            .with_prompt("Enter your OpenAI API key")
-            .interact_text()
+        let api_key = Text::new("Enter your OpenAI API key:")
+            .prompt()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         
         // Provider selection
         let providers = vec!["openai"];
-        let provider_selection = Select::new()
-            .with_prompt("Select LLM provider")
-            .items(&providers)
-            .default(0)
-            .interact()
+        let provider_selection = Select::new("Select LLM provider:", providers.clone())
+            .prompt()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         
         // Model selection
-        let models = match providers[provider_selection] {
+        let models = match provider_selection {
             "openai" => vec!["gpt-3.5-turbo", "gpt-4", "gpt-4.1-mini-2025-04-14"],
             _ => vec!["gpt-3.5-turbo"],
         };
         
-        let model_selection = Select::new()
-            .with_prompt("Select model")
-            .items(&models)
-            .default(0)
-            .interact()
+        let model_selection = Select::new("Select model:", models.clone())
+            .prompt()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         
         // Candidate count
-        let candidate_count: u32 = Input::new()
-            .with_prompt("Number of commit message candidates")
-            .default(5)
-            .interact_text()
+        let candidate_count_str = Text::new("Number of commit message candidates:")
+            .with_default("5")
+            .prompt()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let candidate_count: u32 = candidate_count_str.parse().map_err(|_| {
+            io::Error::new(io::ErrorKind::InvalidInput, "candidate-count must be a number")
+        })?;
         
         // Dev mode
-        let dev_mode = Confirm::new()
-            .with_prompt("Enable development mode (dry-run by default)?")
-            .default(false)
-            .interact()
+        let dev_mode = Confirm::new("Enable development mode (dry-run by default)?")
+            .with_default(false)
+            .prompt()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         
         let config = Config {
             api_key: Some(api_key),
-            llm_provider: Some(providers[provider_selection].to_string()),
-            llm_model: Some(models[model_selection].to_string()),
+            llm_provider: Some(provider_selection.to_string()),
+            llm_model: Some(model_selection.to_string()),
             candidate_count: Some(candidate_count),
             committo_dev: Some(dev_mode),
         };
-        
-        // Create parent directory if needed
-        if let Some(parent) = config_path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
         
         config.save(config_path)?;
         
