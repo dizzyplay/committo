@@ -23,3 +23,7 @@ spinners = "4.1.1"
 tempfile = "3.10.1"
 assert_cmd = "2.0.14"
 predicates = "3.1.0"
+
+[package.metadata.release]   # ← ‘release’ 섹션의 정확한 이름
+publish = false
+verify  = false
