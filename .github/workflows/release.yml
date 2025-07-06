@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: committo-linux
+            exe: ""
+          - os: macos-14
+            targets: "x86_64-apple-darwin aarch64-apple-darwin"
+            artifact_name: committo-macos
+            exe: ""
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: committo-windows
+            exe: ".exe"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.targets || matrix.target }}
+
+      - name: Build binary (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build binary (macOS)
+        if: matrix.os == 'macos-14'
+        run: |
+          cargo build --release --target x86_64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
+
+      - name: Build binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload artifact (Linux/Windows)
+        if: matrix.os != 'macos-14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: target/${{ matrix.target }}/release/committo${{ matrix.exe }}
+
+      - name: Upload artifact (macOS)
+        if: matrix.os == 'macos-14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            target/x86_64-apple-darwin/release/committo
+            target/aarch64-apple-darwin/release/committo
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare binaries for GoReleaser
+        run: |
+          mkdir -p dist
+          # Linux
+          cp artifacts/committo-linux/target/x86_64-unknown-linux-gnu/release/committo dist/committo-linux
+          # macOS Intel
+          cp artifacts/committo-macos/target/x86_64-apple-darwin/release/committo dist/committo-macos
+          # macOS Apple Silicon
+          cp artifacts/committo-macos/target/aarch64-apple-darwin/release/committo dist/committo-macos-arm64
+          # Windows
+          cp artifacts/committo-windows/target/x86_64-pc-windows-msvc/release/committo.exe dist/committo-windows.exe
+          
+          # Make Unix binaries executable (exclude Windows .exe files)
+          find dist -type f ! -name "*.exe" -exec chmod +x {} \;
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
