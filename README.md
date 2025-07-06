@@ -56,18 +56,6 @@ echo "frontend: UI 컴포넌트 변경시 component: 접두사 사용" > /projec
 
 # 스모크 테스트 (/tmp 격리 환경)
 ./scripts/smoke_test.sh
-```
-
-## 설정 파일
-
-`~/.committo.toml`:
-```toml
-api-key = "your-key-here"
-candidate-count = 5
-llm-provider = "openai"
-llm-model = "gpt-3.5-turbo"
-run-edit = false
-```
 
 ## 초기 설정
 
