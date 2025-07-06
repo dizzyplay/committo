@@ -57,14 +57,19 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: target/${{ matrix.target }}/release/committo${{ matrix.exe }}
 
-      - name: Upload artifact (macOS)
+      - name: Upload artifact (macOS Intel)
         if: matrix.os == 'macos-14'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: |
-            target/x86_64-apple-darwin/release/committo
-            target/aarch64-apple-darwin/release/committo
+          name: committo-macos
+          path: target/x86_64-apple-darwin/release/committo
+
+      - name: Upload artifact (macOS ARM64)
+        if: matrix.os == 'macos-14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: committo-macos-arm64
+          path: target/aarch64-apple-darwin/release/committo
 
   release:
     needs: build
@@ -80,17 +85,22 @@ jobs:
         with:
           path: artifacts
 
+      - name: Debug artifacts structure
+        run: |
+          echo "=== Artifacts structure ==="
+          find artifacts -type f
+          
       - name: Prepare binaries for GoReleaser
         run: |
           mkdir -p dist
           # Linux
-          cp artifacts/committo-linux/target/x86_64-unknown-linux-gnu/release/committo dist/committo-linux
-          # macOS Intel
-          cp artifacts/committo-macos/target/x86_64-apple-darwin/release/committo dist/committo-macos
+          cp artifacts/committo-linux/committo dist/committo-linux
+          # macOS Intel  
+          cp artifacts/committo-macos/committo dist/committo-macos
           # macOS Apple Silicon
-          cp artifacts/committo-macos/target/aarch64-apple-darwin/release/committo dist/committo-macos-arm64
+          cp artifacts/committo-macos-arm64/committo dist/committo-macos-arm64
           # Windows
-          cp artifacts/committo-windows/target/x86_64-pc-windows-msvc/release/committo.exe dist/committo-windows.exe
+          cp artifacts/committo-windows/committo.exe dist/committo-windows.exe
           
           # Make Unix binaries executable (exclude Windows .exe files)
           find dist -type f ! -name "*.exe" -exec chmod +x {} \;
