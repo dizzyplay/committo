@@ -15,7 +15,7 @@ fn test_set_creates_new_key() {
     
     cmd.assert().success();
     
-    let content = fs::read_to_string(temp_home.path().join("committo.toml")).unwrap();
+    let content = fs::read_to_string(temp_home.path().join(".committo.toml")).unwrap();
     assert!(content.contains("candidate-count = 3"));
 }
 
@@ -24,7 +24,7 @@ fn test_set_updates_existing_key() {
     let temp_home = TempDir::new().unwrap();
     
     // Create initial config file
-    fs::write(temp_home.path().join("committo.toml"), "candidate-count = 1\napi-key = \"test\"\n").unwrap();
+    fs::write(temp_home.path().join(".committo.toml"), "candidate-count = 1\napi-key = \"test\"\n").unwrap();
     
     let mut cmd = Command::cargo_bin("committo").unwrap();
     cmd.env("HOME", temp_home.path())
@@ -36,7 +36,7 @@ fn test_set_updates_existing_key() {
         .success()
         .stdout(predicate::str::contains("Set candidate-count = 5"));
     
-    let content = fs::read_to_string(temp_home.path().join("committo.toml")).unwrap();
+    let content = fs::read_to_string(temp_home.path().join(".committo.toml")).unwrap();
     assert!(content.contains("candidate-count = 5"));
     assert!(content.contains("api-key = \"test\""));
     assert!(!content.contains("candidate-count = 1"));
@@ -47,7 +47,7 @@ fn test_set_preserves_other_keys() {
     let temp_home = TempDir::new().unwrap();
     
     // Create initial config file with multiple keys
-    fs::write(temp_home.path().join("committo.toml"), "api-key = \"secret\"\nllm-model = \"gpt-4\"\n").unwrap();
+    fs::write(temp_home.path().join(".committo.toml"), "api-key = \"secret\"\nllm-model = \"gpt-4\"\n").unwrap();
     
     let mut cmd = Command::cargo_bin("committo").unwrap();
     cmd.env("HOME", temp_home.path())
@@ -57,7 +57,7 @@ fn test_set_preserves_other_keys() {
     
     cmd.assert().success();
     
-    let content = fs::read_to_string(temp_home.path().join("committo.toml")).unwrap();
+    let content = fs::read_to_string(temp_home.path().join(".committo.toml")).unwrap();
     assert!(content.contains("api-key = \"secret\""));
     assert!(content.contains("llm-model = \"gpt-4\""));
     assert!(content.contains("candidate-count = 3"));
@@ -85,7 +85,7 @@ fn test_set_multiple_updates() {
         .arg("set").arg("candidate-count").arg("5")
         .assert().success();
     
-    let content = fs::read_to_string(temp_home.path().join("committo.toml")).unwrap();
+    let content = fs::read_to_string(temp_home.path().join(".committo.toml")).unwrap();
     assert!(content.contains("candidate-count = 5"));
     assert_eq!(content.matches("candidate-count").count(), 1);
 }

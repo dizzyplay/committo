@@ -41,7 +41,7 @@ fn test_generate_dry_run_with_convention_files() -> Result<(), Box<dyn std::erro
     fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))?;
 
     // Create config file with API key
-    fs::write(project_root.join("committo.toml"), "api-key = \"test_key_for_dry_run\"")?;
+    fs::write(project_root.join(".committo.toml"), "api-key = \"test_key_for_dry_run\"")?;
 
     let mut cmd = Command::cargo_bin("committo")?;
     cmd.current_dir(&sub_dir);
