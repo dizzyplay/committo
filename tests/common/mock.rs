@@ -23,7 +23,6 @@ impl MockProvider {
                 candidate_count: Some(1),
                 llm_provider: Some("mock".to_string()),
                 llm_model: Some("mock-model".to_string()),
-                committo_dev: Some(false),
             },
             response: "Mock commit message".to_string(),
             should_fail: false,
@@ -41,7 +40,6 @@ impl MockProvider {
                 candidate_count: Some(1),
                 llm_provider: Some("mock".to_string()),
                 llm_model: Some("mock-model".to_string()),
-                committo_dev: Some(false),
             },
             response: response.to_string(),
             should_fail: false,
@@ -59,7 +57,6 @@ impl MockProvider {
                 candidate_count: Some(1),
                 llm_provider: Some("mock".to_string()),
                 llm_model: Some("mock-model".to_string()),
-                committo_dev: Some(false),
             },
             response: String::new(),
             should_fail: true,
@@ -124,10 +121,7 @@ impl LlmProvider for MockProvider {
         self.app_config.candidate_count.unwrap_or(1)
     }
 
-    fn get_dev_mode(&self) -> bool {
-        self.app_config.committo_dev.unwrap_or(false)
-    }
-    
+
     fn get_app_config(&self) -> &Config {
         &self.app_config
     }

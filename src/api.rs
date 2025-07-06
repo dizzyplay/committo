@@ -69,9 +69,6 @@ pub trait LlmProvider: Send + Sync {
     /// Get candidate count from internal config
     fn get_candidate_count(&self) -> u32;
     
-    /// Get dev mode from internal config
-    fn get_dev_mode(&self) -> bool;
-
     /// Main generate commit message method (with dry run support)
     async fn generate_commit_message(&self, diff: &str, dry_run: bool) -> Result<String, LlmError> {
         // Always check API key first, even for dry run

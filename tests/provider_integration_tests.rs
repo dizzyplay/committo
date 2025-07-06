@@ -52,7 +52,6 @@ async fn test_provider_without_api_key() -> Result<(), Box<dyn std::error::Error
         candidate_count: Some(1),
         llm_provider: Some("mock".to_string()),
         llm_model: Some("mock-model".to_string()),
-        committo_dev: Some(false),
     };
     let provider = MockProvider::with_config(config);
 

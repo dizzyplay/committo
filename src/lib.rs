@@ -34,7 +34,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             let provider = providers::ProviderFactory::create_provider(config);
             
             // Get effective dry run mode (CLI flag or config dev mode)
-            let effective_dry_run = dry_run || provider.get_dev_mode();
+            let effective_dry_run = dry_run;
 
             let diff = git::get_staged_diff()?;
             if !effective_dry_run && diff.trim().is_empty() {
@@ -115,14 +115,6 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             
             // Default behavior: automatically pipe to git commit --edit -F -
             commit::execute_git_commit_with_pipe(&selected_message)?;
-        }
-        Commands::Dev => {
-            // Dev command is just an alias for generate --dry-run
-            let generate_cmd = Commands::Generate { dry_run: true };
-            return Box::pin(run(Cli {
-                command: generate_cmd,
-            }))
-            .await;
         }
     }
     Ok(())

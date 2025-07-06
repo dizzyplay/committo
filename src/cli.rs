@@ -25,6 +25,4 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Quick dry-run (alias for generate --dry-run)
-    Dev,
 }

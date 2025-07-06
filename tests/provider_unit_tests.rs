@@ -39,7 +39,6 @@ mod provider_tests {
         assert_eq!(config.model, "mock-model");
         assert_eq!(provider.get_provider_name(), "mock");
         assert_eq!(provider.get_candidate_count(), 1);
-        assert_eq!(provider.get_dev_mode(), false);
     }
 
     #[test]
@@ -49,7 +48,6 @@ mod provider_tests {
             candidate_count: Some(1),
             llm_provider: Some("mock".to_string()),
             llm_model: Some("mock-model".to_string()),
-            committo_dev: Some(false),
         };
         
         // Test various key lengths
@@ -66,7 +64,6 @@ mod provider_tests {
             candidate_count: Some(5),
             llm_provider: Some("openai".to_string()),
             llm_model: Some("gpt-4".to_string()),
-            committo_dev: Some(false),
         };
         
         let output = config.show_masking_config();
