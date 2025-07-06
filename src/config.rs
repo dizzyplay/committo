@@ -39,6 +39,9 @@ pub struct Config {
 
     #[serde(rename = "llm-model")]
     pub llm_model: Option<String>,
+
+    #[serde(rename = "run-edit")]
+    pub run_edit: Option<bool>,
 }
 
 impl ConfigProvider for Config {
@@ -60,6 +63,10 @@ impl ConfigProvider for Config {
 }
 
 impl Config {
+    /// Get run-edit setting (default to true if not set)
+    pub fn get_run_edit(&self) -> bool {
+        self.run_edit.unwrap_or(true)
+    }
     /// Create new config instance, loading from file or creating interactively if needed
     pub fn new(config_path: &Path) -> io::Result<(Config, std::path::PathBuf)> {
         let config_path_buf = config_path.to_path_buf();
@@ -115,11 +122,20 @@ impl Config {
             }
             LLM_PROVIDER_CONFIG => self.llm_provider = Some(value.to_string()),
             LLM_MODEL_CONFIG => self.llm_model = Some(value.to_string()),
+            RUN_EDIT_CONFIG => {
+                let run_edit: bool = value.parse().map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "run-edit must be true or false",
+                    )
+                })?;
+                self.run_edit = Some(run_edit);
+            }
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
                     format!(
-                        "Invalid config key '{}'. Valid keys are: api-key, candidate-count, llm-provider, llm-model, committo-dev",
+                        "Invalid config key '{}'. Valid keys are: api-key, candidate-count, llm-provider, llm-model, run-edit",
                         key
                     ),
                 ));
@@ -189,11 +205,20 @@ impl Config {
             )
         })?;
 
+        // Run edit mode
+        let run_edit_options = vec!["true", "false"];
+        let run_edit_selection = Select::new("Open editor before committing:", run_edit_options.clone())
+            .with_starting_cursor(0) // Default to true
+            .prompt()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let run_edit = run_edit_selection == "true";
+
         let config = Config {
             api_key: Some(api_key),
             llm_provider: Some(provider_selection.to_string()),
             llm_model: Some(model_selection.to_string()),
             candidate_count: Some(candidate_count),
+            run_edit: Some(run_edit),
         };
 
         config.save(config_path)?;
@@ -235,6 +260,9 @@ impl Config {
         if let Some(model) = &self.llm_model {
             output.push_str(&format!("LLM Model : \"{}\"\n", model));
         }
+        if let Some(run_edit) = self.run_edit {
+            output.push_str(&format!("Run Edit : {}\n", run_edit));
+        }
         output
     }
 }
@@ -244,6 +272,7 @@ pub const API_KEY_CONFIG: &str = "api-key";
 pub const LLM_PROVIDER_CONFIG: &str = "llm-provider";
 pub const LLM_MODEL_CONFIG: &str = "llm-model";
 pub const CANDIDATE_COUNT_CONFIG: &str = "candidate-count";
+pub const RUN_EDIT_CONFIG: &str = "run-edit";
 
 /// Default OpenAI models
 pub const DEFAULT_OPENAI_MODEL: &str = "gpt-3.5-turbo";
@@ -261,6 +290,7 @@ pub fn get_config_value(config_path: &Path, key: &str) -> io::Result<Option<Stri
         CANDIDATE_COUNT_CONFIG => config.candidate_count.map(|v| v.to_string()),
         LLM_PROVIDER_CONFIG => config.llm_provider,
         LLM_MODEL_CONFIG => config.llm_model,
+        RUN_EDIT_CONFIG => config.run_edit.map(|v| v.to_string()),
         _ => None,
     };
 

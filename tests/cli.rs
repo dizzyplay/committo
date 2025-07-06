@@ -91,6 +91,7 @@ fn test_show_command_without_config_file() -> Result<(), Box<dyn std::error::Err
     cmd.arg("show");
 
     cmd.assert()
+        .failure()
         .stderr(predicate::str::contains("Error: IO error: Failed to initialize input reader"));
 
     Ok(())

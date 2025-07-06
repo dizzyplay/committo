@@ -48,6 +48,7 @@ mod provider_tests {
             candidate_count: Some(1),
             llm_provider: Some("mock".to_string()),
             llm_model: Some("mock-model".to_string()),
+            run_edit: Some(true),
         };
         
         // Test various key lengths
@@ -64,6 +65,7 @@ mod provider_tests {
             candidate_count: Some(5),
             llm_provider: Some("openai".to_string()),
             llm_model: Some("gpt-4".to_string()),
+            run_edit: Some(true),
         };
         
         let output = config.show_masking_config();

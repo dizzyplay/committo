@@ -2,12 +2,17 @@ use std::io::{self, Write};
 use std::process::{Command, Stdio};
 
 /// Execute git commit with the message piped to it
-/// This automatically runs: echo "message" | git commit --edit -F -
-pub fn execute_git_commit_with_pipe(message: &str) -> io::Result<()> {
+/// This automatically runs: echo "message" | git commit --edit -F - (with --edit)
+/// or echo "message" | git commit -F - (without --edit)
+pub fn execute_git_commit_with_pipe(message: &str, run_edit: bool) -> io::Result<()> {
     let mut cmd = Command::new("git");
-    cmd.arg("commit")
-       .arg("--edit")
-       .arg("-F")
+    cmd.arg("commit");
+    
+    if run_edit {
+        cmd.arg("--edit");
+    }
+    
+    cmd.arg("-F")
        .arg("-") // Read from stdin
        .stdin(Stdio::piped());
     

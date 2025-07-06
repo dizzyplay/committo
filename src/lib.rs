@@ -32,7 +32,7 @@ pub async fn run(cli: Cli) -> io::Result<()> {
             // Default to generate when no subcommand is provided
             // Create config instance - this will handle setup if needed
             let (config, _) = config::Config::new(&config_path)?;
-            let provider = providers::ProviderFactory::create_provider(config);
+            let provider = providers::ProviderFactory::create_provider(config.clone());
             
             // Get effective dry run mode from global CLI flag
             let effective_dry_run = cli.dry_run;
@@ -114,8 +114,9 @@ pub async fn run(cli: Cli) -> io::Result<()> {
                 }
             };
             
-            // Default behavior: automatically pipe to git commit --edit -F -
-            commit::execute_git_commit_with_pipe(&selected_message)?;
+            // Use run-edit config setting to determine whether to open editor
+            let run_edit = config.get_run_edit();
+            commit::execute_git_commit_with_pipe(&selected_message, run_edit)?;
         }
     }
     Ok(())
