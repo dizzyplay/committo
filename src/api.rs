@@ -96,7 +96,7 @@ pub trait LlmProvider: Send + Sync {
             return Ok("Dry run complete.".to_string());
         }
 
-        let mut sp = Spinner::new(Spinners::BouncingBall, "Your next legendary commit, coming right up!!!".into());
+        let mut sp = Spinner::new(Spinners::BouncingBall, "Generating Commit Message...".into());
         let response= self.generate_commit_message_impl(&system_prompt, diff).await;
         sp.stop_and_persist("✔", "How about these? ".into());
         response
