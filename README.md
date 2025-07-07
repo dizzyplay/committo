@@ -1,15 +1,16 @@
 # Committo
 
-커밋 메시지 생성기 
+Commit-message generator
 
-## install(Build)
+## Install (Build from source)
 
 ```bash
-build
+# Build
 cargo build --release
-```
+````
 
-## install(Homebrew)
+## Install (Homebrew)
+
 ```bash
 brew tap dizzyplay/committo
 brew install committo
@@ -17,53 +18,49 @@ brew install committo
 brew update
 brew upgrade committo
 ```
-## 사용법
 
-### 설정
+## Usage
+
+### Configuration
+
 ```bash
-# 설정 값 지정
-committo set api-key 'your-key-here'
+# Set values
+committo set api-key your-key-here
 committo set candidate-count 5
 committo set llm-model gpt-4
 
-# 설정 확인
+# Show current settings
 committo show
 ```
 
-### 커밋 메시지 생성
+### Generate commit messages
+
 ```bash
 git add .
-committo or committo generate   # 실제 API 호출
-committo generate --dry-run          # 드라이런 (프롬프트 확인용. API 호출 안함)
+committo                # or: committo generate   – actually calls the API
+committo generate --dry-run   # Dry-run (shows prompt only, no API call)
 ```
 
-## 컨벤션 파일
+## Convention file
 
-`.committoconvention` 파일로 계층적 커밋 규칙 정의:
+Define hierarchical commit rules with a `.committoconvention` file:
 
 ```bash
-# 홈 디렉토리 - 개인 취향
-echo "간결하고 명확한 한글 커밋 메시지 선호" > ~/.committoconvention
+# Home directory – personal preferences
+echo "Prefer concise and clear Korean commit messages" > ~/.committoconvention
 
-# 프로젝트 루트 - 프로젝트 전체 규칙  
-echo "conventional commits 형식: feat/fix/docs/refactor" > /project/.committoconvention
+# Project root – project-wide rules
+echo "Conventional Commits format: feat/fix/docs/refactor" > /project/.committoconvention
 
-# 모노레포 패키지 - 세부 컨벤션
-echo "frontend: UI 컴포넌트 변경시 component: 접두사 사용" > /project/frontend/.committoconvention
+# Monorepo package – detailed conventions
+echo "frontend: Use 'component:' prefix for UI component changes" > /project/frontend/.committoconvention
 ```
 
-**프롬프트 결합 순서:** 부모 → 자식 디렉토리 순으로 합쳐져 더 구체적이고 맥락에 맞는 커밋 메시지 생성
+**Prompt merge order:** parent → child directories, so messages become increasingly specific and context-aware.
 
-## 개발
+## First-time setup
 
-# 스모크 테스트 (/tmp 격리 환경)
-```
-./scripts/smoke_test.sh
-```
-
-## 초기 설정
-
-처음 사용시 설정 파일이 없으면 자동으로 대화형 설정 진행:
+If no config file is found, an interactive setup runs automatically:
 
 ```bash
 $ committo
@@ -71,13 +68,15 @@ No configuration file found at: /Users/user/committo.toml
 ...
 ```
 
-## 예시
+## Example
 
 ```bash
 $ git add src/lib.rs
 $ committo
 🔄 Retry (generate new messages)
-feat: 환경변수 파싱에 정규표현식 검증 추가
-refactor: 설정 파일 로딩 로직 중앙화
-Select a commit message: feat: 환경변수 파싱에 정규표현식 검증 추가
+feat: Add regex validation for env-var parsing
+refactor: Centralize config-file loading logic
+Select a commit message: feat: Add regex validation for env-var parsing
 ```
+
+
